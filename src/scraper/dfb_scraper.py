@@ -149,11 +149,40 @@ class DFBScraper:
             login_submit.click()
             logger.info("Login-Button geklickt")
 
-            # Warte auf Navigation nach Login
-            self.page.wait_for_timeout(3000)
+            # Warte und prüfe ob Login erfolgreich war
+            logger.info("Warte auf Antwort vom Server...")
+            self.page.wait_for_timeout(5000)  # 5 Sekunden statt 3
+
+            # Prüfe mehrere Indikatoren für erfolgreichen Login
+            current_url = self.page.url
+            logger.info(f"Aktuelle URL nach Login: {current_url}")
+
+            # 1. Prüfung: Sind wir auf einer anderen Domain?
+            if "auth.dfbnet.org" not in current_url:
+                logger.info("Login erfolgreich - Weitergeleitet zu DFBnet")
+                return
+
+            # 2. Prüfung: Gibt es eine Fehlermeldung?
+            try:
+                error_message = self.page.locator('.alert-error, .error, [class*="error"]').first
+                if error_message.is_visible(timeout=1000):
+                    error_text = error_message.inner_text()
+                    logger.error(f"Login-Fehler: {error_text}")
+                    raise Exception(f"Login fehlgeschlagen: {error_text}")
+            except:
+                pass
+
+            # 3. Prüfung: Ist Login-Formular noch sichtbar?
+            if self.page.locator('input[type="password"]').is_visible(timeout=2000):
+                logger.error("Login fehlgeschlagen - Login-Formular noch sichtbar")
+                raise Exception("Login fehlgeschlagen - Bitte Credentials prüfen")
+
+            # Wenn wir hier sind, war Login erfolgreich
             logger.info("Login erfolgreich")
 
         except Exception as e:
+            if "Login fehlgeschlagen" in str(e):
+                raise
             logger.error(f"Fehler beim Login: {e}")
             raise
 
