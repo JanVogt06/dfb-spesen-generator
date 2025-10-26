@@ -76,6 +76,12 @@ def test_navigation():
                 logger.info(f"Schiedsrichter ({len(referee_data)}): {referee_data}")
                 scraper.close_modal()
 
+                # 3. Spielstätte
+                scraper.open_venue_modal(0)
+                venue_data = scraper.extract_venue_info()
+                logger.info(f"Spielstätte: {venue_data}")
+                scraper.close_modal()
+
                 logger.info("Datenextraktion erfolgreich")
 
             logger.info("Navigation und Login erfolgreich abgeschlossen")

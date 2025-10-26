@@ -35,9 +35,15 @@ class DFBScraper:
 
         self.playwright = sync_playwright().start()
         self.browser = self.playwright.chromium.launch(headless=self.headless)
-        self.page = self.browser.new_page()
 
-        logger.info(f"Browser gestartet (headless={self.headless})")
+        # Browser-Kontext mit fester Größe erstellen
+        context = self.browser.new_context(
+            viewport={'width': 1920, 'height': 1080},
+            screen={'width': 1920, 'height': 1080}
+        )
+        self.page = context.new_page()
+
+        logger.info(f"Browser gestartet (headless={self.headless}, 1920x1080)")
 
     def stop(self):
         """Stoppt den Browser"""
@@ -468,6 +474,79 @@ class DFBScraper:
         except Exception as e:
             logger.error(f"Fehler beim Extrahieren der Schiedsrichter-Kontakte: {e}")
             return []
+
+    def open_venue_modal(self, match_index: int):
+        """Öffnet das Spielstätte-Modal für ein Spiel"""
+        logger.info(f"Öffne Spielstätte-Modal für Spiel {match_index + 1}...")
+
+        try:
+            # Finde den Spiel-Container
+            match_containers = self.page.locator('sria-matches-match-list-item').all()
+
+            if match_index >= len(match_containers):
+                raise Exception(f"Spiel {match_index + 1} nicht gefunden")
+
+            container = match_containers[match_index]
+
+            # Finde das Spielstätte-Modal Element (mit Geotag-Icon)
+            venue_modal = container.locator('sria-matches-venue-details-modal').first
+
+            if venue_modal.is_visible():
+                venue_modal.click()
+                self.page.wait_for_timeout(1000)
+                logger.info("Spielstätte-Modal geöffnet")
+            else:
+                raise Exception("Spielstätte-Modal Button nicht sichtbar")
+
+        except Exception as e:
+            logger.error(f"Fehler beim Öffnen des Spielstätte-Modals: {e}")
+            raise
+
+    def extract_venue_info(self):
+        """Extrahiert Spielstätten-Informationen aus dem geöffneten Modal"""
+        logger.info("Extrahiere Spielstätten-Informationen...")
+
+        try:
+            venue_info = {}
+
+            # Spielstätte Name - suche nach dem Text direkt unter der Überschrift
+            # Der Name steht im Modal-Body, nach "SPIELSTÄTTE"
+            venue_name_elem = self.page.locator('#modal-subtitle, .subtitle').first
+            if venue_name_elem.is_visible(timeout=1000):
+                venue_info['name'] = venue_name_elem.inner_text().strip()
+
+            # Falls leer, versuche alternativen Selektor
+            if not venue_info.get('name'):
+                # Suche nach dem span mit dem Venue-Namen (z.B. "BSA Ingolstadt Süd-Ost, Stadion")
+                venue_span = self.page.locator('dfb-geotag-icon').locator('..').locator('..').locator('span').first
+                if venue_span.is_visible(timeout=1000):
+                    venue_info['name'] = venue_span.inner_text().strip()
+
+            # Adresse
+            address = self.page.locator('dfb-geotag-icon').locator('..').locator('..').locator('div').filter(
+                has_text='/Str|straße|platz/').first
+            if address.is_visible(timeout=1000):
+                venue_info['adresse'] = address.inner_text().strip()
+            else:
+                # Alternativer Ansatz: Suche nach der Adresszeile
+                address_lines = self.page.locator('text=/\\d{5}/').all()  # Suche nach PLZ (5 Ziffern)
+                if address_lines:
+                    for line in address_lines:
+                        text = line.inner_text().strip()
+                        if len(text) > 5:  # Mehr als nur PLZ
+                            venue_info['adresse'] = text
+                            break
+
+            # Rasenplatz / Kunstrasen
+            platz_typ = self.page.locator('text=/Rasenplatz|Kunstrasen|Hartplatz/').first
+            if platz_typ.is_visible(timeout=500):
+                venue_info['platz_typ'] = platz_typ.inner_text().strip()
+
+            return venue_info
+
+        except Exception as e:
+            logger.error(f"Fehler beim Extrahieren der Spielstätten-Info: {e}")
+            return {}
 
     def __enter__(self):
         """Context Manager: Automatisches Starten"""
