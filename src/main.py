@@ -54,6 +54,23 @@ def test_navigation():
             # Schritt 7: Menü öffnen falls nötig
             scraper.open_menu_if_needed()
 
+            # Schritt 8: Zu Schiriansetzung -> Eigene Daten navigieren
+            scraper.navigate_to_schiriansetzung()
+
+            # Schritt 9: Alle Spiele sammeln
+            anzahl_spiele = scraper.get_all_matches()
+
+            # Schritt 10: Test - Öffne und schließe Modal für erstes Spiel
+            if anzahl_spiele > 0:
+                logger.info("=== Test: Öffne Modal für erstes Spiel ===")
+                scraper.open_mehr_info_modal(0)
+
+                # Modal 3 Sekunden offen lassen zum Anschauen
+                time.sleep(3)
+
+                scraper.close_modal()
+                logger.info("Modal-Test erfolgreich")
+
             logger.info("Navigation und Login erfolgreich abgeschlossen")
 
             # Browser offen lassen zum Anschauen

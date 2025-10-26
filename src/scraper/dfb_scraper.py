@@ -207,6 +207,117 @@ class DFBScraper:
             logger.info("Menü-Button nicht gefunden - Menü wahrscheinlich bereits offen")
             # Kein Fehler werfen, da dies normal ist bei großen Bildschirmen
 
+    def navigate_to_schiriansetzung(self):
+        """Navigiert zu Schiriansetzung -> Eigene Daten"""
+        logger.info("Navigiere zu Schiriansetzung...")
+
+        try:
+            # Schritt 1: Auf "Schiriansetzung" klicken
+            schiri_menu = self.page.locator('text=Schiriansetzung').first
+            schiri_menu.wait_for(state="visible", timeout=5000)
+            logger.info("Schiriansetzung-Menüpunkt gefunden, klicke...")
+            schiri_menu.click()
+
+            # Warte bis Untermenü erscheint
+            self.page.wait_for_timeout(1000)
+
+            # Schritt 2: Auf "Eigene Daten" klicken
+            eigene_daten = self.page.locator('text=Eigene Daten').first
+            eigene_daten.wait_for(state="visible", timeout=5000)
+            logger.info("Eigene Daten gefunden, klicke...")
+
+            # Neuen Tab erwarten
+            with self.page.context.expect_page() as new_page_info:
+                eigene_daten.click()
+
+            # Wechsle zum neuen Tab
+            new_page = new_page_info.value
+            new_page.wait_for_load_state("domcontentloaded")
+
+            # Update page reference
+            self.page = new_page
+
+            logger.info(f"Neue Seite geöffnet: {self.page.url}")
+            logger.info("Erfolgreich zu Eigene Daten navigiert")
+
+        except Exception as e:
+            logger.error(f"Fehler beim Navigieren zu Schiriansetzung: {e}")
+            raise
+
+    def get_all_matches(self):
+        """Sammelt alle Spiele von der Seite"""
+        logger.info("Sammle alle Spiele...")
+
+        try:
+            # Warte bis Spiele geladen sind
+            self.page.wait_for_timeout(2000)
+
+            # Finde alle Spiel-Container (jeder Container = 1 Spiel)
+            match_containers = self.page.locator('sria-matches-match-list-item').all()
+
+            anzahl_spiele = len(match_containers)
+            logger.info(f"Gefunden: {anzahl_spiele} Spiele")
+
+            return anzahl_spiele
+
+        except Exception as e:
+            logger.error(f"Fehler beim Sammeln der Spiele: {e}")
+            raise
+
+    def open_mehr_info_modal(self, index: int):
+        """Öffnet das 'Mehr Info' Modal für ein bestimmtes Spiel"""
+        logger.info(f"Öffne Mehr Info Modal für Spiel {index + 1}...")
+
+        try:
+            # Finde alle Spiel-Container
+            match_containers = self.page.locator('sria-matches-match-list-item').all()
+
+            if index >= len(match_containers):
+                raise Exception(f"Spiel {index + 1} nicht gefunden")
+
+            # Hole den spezifischen Container
+            container = match_containers[index]
+
+            # Finde "Mehr Info" Button innerhalb dieses Containers
+            # Suche nach sria-matches-game-details-modal
+            mehr_info = container.locator('sria-matches-game-details-modal').first
+
+            if mehr_info.is_visible():
+                mehr_info.click()
+                # Warte bis Modal geladen ist
+                self.page.wait_for_timeout(1000)
+                logger.info("Mehr Info Modal geöffnet")
+            else:
+                raise Exception("Mehr Info Button nicht sichtbar")
+
+        except Exception as e:
+            logger.error(f"Fehler beim Öffnen des Modals: {e}")
+            raise
+
+    def close_modal(self):
+        """Schließt ein geöffnetes Modal"""
+        logger.info("Schließe Modal...")
+
+        try:
+            # Suche nach dem Schließen-Button (X)
+            close_button = self.page.locator('button[aria-label="Close"], .modal-close, [class*="close"]').first
+
+            if close_button.is_visible(timeout=2000):
+                close_button.click()
+                self.page.wait_for_timeout(500)
+                logger.info("Modal geschlossen")
+            else:
+                # Alternative: ESC-Taste drücken
+                self.page.keyboard.press('Escape')
+                self.page.wait_for_timeout(500)
+                logger.info("Modal mit ESC geschlossen")
+
+        except Exception as e:
+            logger.warning(f"Fehler beim Schließen des Modals: {e}")
+            # Versuche ESC als Fallback
+            self.page.keyboard.press('Escape')
+            self.page.wait_for_timeout(500)
+
     def __enter__(self):
         """Context Manager: Automatisches Starten"""
         self.start()
