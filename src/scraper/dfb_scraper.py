@@ -151,7 +151,7 @@ class DFBScraper:
 
             # Warte und prüfe ob Login erfolgreich war
             logger.info("Warte auf Antwort vom Server...")
-            self.page.wait_for_timeout(5000)  # 5 Sekunden statt 3
+            self.page.wait_for_timeout(5000)
 
             # Prüfe mehrere Indikatoren für erfolgreichen Login
             current_url = self.page.url
@@ -185,6 +185,27 @@ class DFBScraper:
                 raise
             logger.error(f"Fehler beim Login: {e}")
             raise
+
+    def open_menu_if_needed(self):
+        """Öffnet das Menü, falls es noch geschlossen ist"""
+        logger.info("Prüfe ob Menü geöffnet werden muss...")
+
+        try:
+            # Suche nach dem Menü-Button (nur bei kleinen Bildschirmen sichtbar)
+            menu_button = self.page.locator('#dfb-Menu-toggle, button[ng-click*="menuBtnClicked"]').first
+
+            # Prüfe ob Button existiert und sichtbar ist
+            if menu_button.is_visible(timeout=2000):
+                logger.info("Menü-Button gefunden, klicke...")
+                menu_button.click()
+                self.page.wait_for_timeout(1000)
+                logger.info("Menü geöffnet")
+            else:
+                logger.info("Menü-Button nicht sichtbar - Menü bereits offen")
+
+        except Exception as e:
+            logger.info("Menü-Button nicht gefunden - Menü wahrscheinlich bereits offen")
+            # Kein Fehler werfen, da dies normal ist bei großen Bildschirmen
 
     def __enter__(self):
         """Context Manager: Automatisches Starten"""

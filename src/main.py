@@ -51,6 +51,9 @@ def test_navigation():
             # Schritt 6: Login-Formular ausfüllen
             scraper.login()
 
+            # Schritt 7: Menü öffnen falls nötig
+            scraper.open_menu_if_needed()
+
             logger.info("Navigation und Login erfolgreich abgeschlossen")
 
             # Browser offen lassen zum Anschauen
