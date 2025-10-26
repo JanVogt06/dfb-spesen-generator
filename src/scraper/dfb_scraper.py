@@ -366,6 +366,109 @@ class DFBScraper:
             logger.error(f"Fehler beim Extrahieren der Spielinformationen: {e}")
             return {}
 
+    def open_referee_modal(self, match_index: int):
+        """Öffnet das Schiedsrichter-Kontakte Modal für ein Spiel"""
+        logger.info(f"Öffne Schiedsrichter-Modal für Spiel {match_index + 1}...")
+
+        try:
+            # Finde den Spiel-Container
+            match_containers = self.page.locator('sria-matches-match-list-item').all()
+
+            if match_index >= len(match_containers):
+                raise Exception(f"Spiel {match_index + 1} nicht gefunden")
+
+            container = match_containers[match_index]
+
+            # Finde das Schiedsrichter-Modal Element
+            referee_modal = container.locator('sria-matches-referees-contact-details-modal').first
+
+            if referee_modal.is_visible():
+                referee_modal.click()
+                self.page.wait_for_timeout(1000)
+                logger.info("Schiedsrichter-Modal geöffnet")
+            else:
+                raise Exception("Schiedsrichter-Modal Button nicht sichtbar")
+
+        except Exception as e:
+            logger.error(f"Fehler beim Öffnen des Schiedsrichter-Modals: {e}")
+            raise
+
+    def extract_referee_contacts(self):
+        """Extrahiert Schiedsrichter-Kontaktdaten aus dem geöffneten Modal"""
+        logger.info("Extrahiere Schiedsrichter-Kontakte...")
+
+        try:
+            referees = []
+
+            # Finde alle Schiedsrichter-Blöcke
+            referee_items = self.page.locator('sria-matches-referee-contact-details-list-item').all()
+
+            for item in referee_items:
+                try:
+                    referee_data = {}
+
+                    # Rolle und Name aus dem ersten fw-700 div (z.B. "SR Louis Gaudes" oder "SRA 1 Jan Vogt")
+                    header = item.locator('.mb-2.fw-700').first
+                    if header.is_visible(timeout=500):
+                        header_text = header.inner_text().strip()
+                        # Parse "SR Louis Gaudes" oder "SRA 1 Jan Vogt"
+                        parts = header_text.split(maxsplit=2)
+                        if len(parts) >= 2:
+                            # Wenn es "SRA 1" ist, kombiniere die ersten zwei Teile
+                            if parts[0] in ['SR', 'SRA', 'Beo']:
+                                if parts[0] == 'SRA' and len(parts) >= 3:
+                                    referee_data['rolle'] = f"{parts[0]} {parts[1]}"  # "SRA 1"
+                                    referee_data['name'] = parts[2] if len(parts) > 2 else ''
+                                else:
+                                    referee_data['rolle'] = parts[0]  # "SR"
+                                    referee_data['name'] = ' '.join(parts[1:])
+
+                    # Telefon
+                    telefon_row = item.locator('text=/Telefon \\(mobil\\)|Telefon \\(privat\\)/').locator('..')
+                    if telefon_row.is_visible(timeout=500):
+                        telefon_col = telefon_row.locator('.col-7, .col-sm-6').last
+                        if telefon_col.is_visible(timeout=500):
+                            telefon_link = telefon_col.locator('a')
+                            if telefon_link.is_visible(timeout=500):
+                                referee_data['telefon'] = telefon_link.inner_text().strip()
+
+                    # E-Mail
+                    email_row = item.locator('text=E-Mail').locator('..')
+                    if email_row.is_visible(timeout=500):
+                        email_col = email_row.locator('.col-7, .col-sm-6').last
+                        if email_col.is_visible(timeout=500):
+                            email_link = email_col.locator('a')
+                            if email_link.is_visible(timeout=500):
+                                referee_data['email'] = email_link.inner_text().strip()
+
+                    # Straße
+                    strasse_row = item.locator('text=Straße, Nr.').locator('..')
+                    if strasse_row.is_visible(timeout=500):
+                        strasse_col = strasse_row.locator('.col-7, .col-sm-6').last
+                        if strasse_col.is_visible(timeout=500):
+                            referee_data['strasse'] = strasse_col.inner_text().strip()
+
+                    # PLZ, Ort
+                    plz_row = item.locator('text=PLZ, Ort').locator('..')
+                    if plz_row.is_visible(timeout=500):
+                        plz_col = plz_row.locator('.col-7, .col-sm-6').last
+                        if plz_col.is_visible(timeout=500):
+                            referee_data['plz_ort'] = plz_col.inner_text().strip()
+
+                    if referee_data and 'rolle' in referee_data:
+                        referees.append(referee_data)
+
+                except Exception as e:
+                    logger.warning(f"Fehler beim Extrahieren eines Schiedsrichters: {e}")
+                    continue
+
+            logger.info(f"Extrahiert: {len(referees)} Schiedsrichter")
+            return referees
+
+        except Exception as e:
+            logger.error(f"Fehler beim Extrahieren der Schiedsrichter-Kontakte: {e}")
+            return []
+
     def __enter__(self):
         """Context Manager: Automatisches Starten"""
         self.start()

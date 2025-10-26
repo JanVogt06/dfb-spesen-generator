@@ -60,18 +60,23 @@ def test_navigation():
             # Schritt 9: Alle Spiele sammeln
             anzahl_spiele = scraper.get_all_matches()
 
-            # Schritt 10: Test - Öffne und schließe Modal für erstes Spiel
+            # Schritt 10: Test - Extrahiere alle Daten vom ersten Spiel
             if anzahl_spiele > 0:
                 logger.info("=== Test: Extrahiere Daten aus erstem Spiel ===")
+
+                # 1. Spielinformationen aus "Mehr Info" Modal
                 scraper.open_mehr_info_modal(0)
-
-                # Extrahiere Daten
                 match_data = scraper.extract_match_info_from_modal()
-                logger.info(f"Extrahierte Spieldaten: {match_data}")
-
-                # Modal schließen
+                logger.info(f"Spieldaten: {match_data}")
                 scraper.close_modal()
-                logger.info("Modal-Test erfolgreich")
+
+                # 2. Schiedsrichter-Kontakte
+                scraper.open_referee_modal(0)
+                referee_data = scraper.extract_referee_contacts()
+                logger.info(f"Schiedsrichter ({len(referee_data)}): {referee_data}")
+                scraper.close_modal()
+
+                logger.info("Datenextraktion erfolgreich")
 
             logger.info("Navigation und Login erfolgreich abgeschlossen")
 
