@@ -318,6 +318,54 @@ class DFBScraper:
             self.page.keyboard.press('Escape')
             self.page.wait_for_timeout(500)
 
+    def extract_match_info_from_modal(self):
+        """Extrahiert Spielinformationen aus dem geöffneten 'Mehr Info' Modal"""
+        logger.info("Extrahiere Spielinformationen aus Modal...")
+
+        try:
+            match_info = {}
+
+            # Anpfiff (Datum + Uhrzeit)
+            anpfiff = self.page.locator('text=/Samstag|Sonntag|Montag|Dienstag|Mittwoch|Donnerstag|Freitag/').first
+            if anpfiff.is_visible(timeout=2000):
+                match_info['anpfiff'] = anpfiff.inner_text().strip()
+
+            # Heim-Team
+            heim_team = self.page.locator('text=Heim').locator('..').locator('.fw-700').first
+            if heim_team.is_visible(timeout=1000):
+                match_info['heim_team'] = heim_team.inner_text().strip()
+
+            # Gast-Team
+            gast_team = self.page.locator('text=Gast').locator('..').locator('.fw-700').first
+            if gast_team.is_visible(timeout=1000):
+                match_info['gast_team'] = gast_team.inner_text().strip()
+
+            # Mannschaftsart
+            mannschaftsart = self.page.locator('text=Mannschaftsart').locator('..').locator('.fw-700').first
+            if mannschaftsart.is_visible(timeout=1000):
+                match_info['mannschaftsart'] = mannschaftsart.inner_text().strip()
+
+            # Spielklasse
+            spielklasse = self.page.locator('text=Spielklasse').locator('..').locator('.fw-700').first
+            if spielklasse.is_visible(timeout=1000):
+                match_info['spielklasse'] = spielklasse.inner_text().strip()
+
+            # Staffel
+            staffel = self.page.locator('text=Staffel').locator('..').locator('.fw-700').first
+            if staffel.is_visible(timeout=1000):
+                match_info['staffel'] = staffel.inner_text().strip()
+
+            # Spieltag
+            spieltag = self.page.locator('text=Spieltag').locator('..').locator('.fw-700').first
+            if spieltag.is_visible(timeout=1000):
+                match_info['spieltag'] = spieltag.inner_text().strip()
+
+            return match_info
+
+        except Exception as e:
+            logger.error(f"Fehler beim Extrahieren der Spielinformationen: {e}")
+            return {}
+
     def __enter__(self):
         """Context Manager: Automatisches Starten"""
         self.start()
