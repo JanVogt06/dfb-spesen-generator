@@ -429,12 +429,13 @@ class DFBScraper:
                                     referee_data['rolle'] = parts[0]  # "SR"
                                     referee_data['name'] = ' '.join(parts[1:])
 
-                    # Telefon
-                    telefon_row = item.locator('text=/Telefon \\(mobil\\)|Telefon \\(privat\\)/').locator('..')
-                    if telefon_row.is_visible(timeout=500):
-                        telefon_col = telefon_row.locator('.col-7, .col-sm-6').last
-                        if telefon_col.is_visible(timeout=500):
-                            telefon_link = telefon_col.locator('a')
+                    # Telefon - kann mobil oder privat sein, manche haben beide
+                    telefon_row = item.locator('text=/Telefon \\(mobil\\)|Telefon \\(privat\\)/')
+                    if telefon_row.count() > 0:
+                        # Nimm die erste Telefonnummer die wir finden
+                        telefon_elem = telefon_row.first.locator('..').locator('.col-7, .col-sm-6').last
+                        if telefon_elem.is_visible(timeout=500):
+                            telefon_link = telefon_elem.locator('a')
                             if telefon_link.is_visible(timeout=500):
                                 referee_data['telefon'] = telefon_link.inner_text().strip()
 
@@ -547,6 +548,45 @@ class DFBScraper:
         except Exception as e:
             logger.error(f"Fehler beim Extrahieren der Spielstätten-Info: {e}")
             return {}
+
+    def scrape_all_matches(self):
+        """Scrapt alle Spiele und sammelt die Daten"""
+        logger.info("=== Starte Scraping aller Spiele ===")
+
+        all_matches = []
+        anzahl_spiele = self.get_all_matches()
+
+        for i in range(anzahl_spiele):
+            logger.info(f"--- Verarbeite Spiel {i + 1}/{anzahl_spiele} ---")
+
+            try:
+                match_data = {}
+
+                # 1. Spielinformationen
+                self.open_mehr_info_modal(i)
+                match_data['spiel_info'] = self.extract_match_info_from_modal()
+                self.close_modal()
+
+                # 2. Schiedsrichter-Kontakte
+                self.open_referee_modal(i)
+                match_data['schiedsrichter'] = self.extract_referee_contacts()
+                self.close_modal()
+
+                # 3. Spielstätte
+                self.open_venue_modal(i)
+                match_data['spielstaette'] = self.extract_venue_info()
+                self.close_modal()
+
+                all_matches.append(match_data)
+                logger.info(f"Spiel {i + 1} erfolgreich verarbeitet")
+
+            except Exception as e:
+                logger.error(f"Fehler bei Spiel {i + 1}: {e}")
+                # Fahre mit nächstem Spiel fort
+                continue
+
+        logger.info(f"=== Scraping abgeschlossen: {len(all_matches)}/{anzahl_spiele} Spiele erfolgreich ===")
+        return all_matches
 
     def __enter__(self):
         """Context Manager: Automatisches Starten"""

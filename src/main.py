@@ -3,6 +3,7 @@ DFB Spesen Generator - Main Entry Point
 """
 import time
 import os
+import json
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -14,6 +15,49 @@ env_path = Path(__file__).parent.parent / ".env"
 load_dotenv(env_path)
 
 logger = setup_logger("main")
+
+
+def scrape_matches():
+    """Scrapt alle Spiele und speichert die Daten"""
+
+    logger.info("=== DFB Scraper: Sammle alle Spieldaten ===")
+
+    # Credentials aus .env laden
+    username = os.getenv("DFB_USERNAME")
+    password = os.getenv("DFB_PASSWORD")
+
+    if not username or not password:
+        logger.error("DFB_USERNAME oder DFB_PASSWORD nicht in .env gesetzt")
+        return None
+
+    try:
+        with DFBScraper(headless=False, username=username, password=password) as scraper:
+            # Navigation und Login
+            scraper.open_dfbnet()
+            scraper.accept_cookies()
+            scraper.click_login()
+            scraper.accept_cookies()
+            scraper.click_login()
+            scraper.login()
+            scraper.open_menu_if_needed()
+            scraper.navigate_to_schiriansetzung()
+
+            # Alle Spiele scrapen
+            all_matches = scraper.scrape_all_matches()
+
+            # Daten als JSON speichern (Backup)
+            output_file = Path(__file__).parent.parent / "matches_data.json"
+            with open(output_file, 'w', encoding='utf-8') as f:
+                json.dump(all_matches, f, ensure_ascii=False, indent=2)
+
+            logger.info(f"Daten gespeichert in: {output_file}")
+            logger.info(f"Erfolgreich {len(all_matches)} Spiele gescrapt")
+
+            return all_matches
+
+    except Exception as e:
+        logger.error(f"Fehler beim Scraping: {e}")
+        raise
 
 
 def test_navigation():
@@ -99,8 +143,8 @@ def test_navigation():
 
 def main():
     """Hauptprogramm"""
-    # Momentan nur Test
-    test_navigation()
+    # Scrape alle Spiele
+    scrape_matches()
 
 
 if __name__ == "__main__":
