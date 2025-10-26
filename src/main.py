@@ -8,6 +8,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from scraper.dfb_scraper import DFBScraper
+from generator.docx_generator import SpesenGenerator
 from utils.logger import setup_logger
 
 # Lade .env Datei
@@ -58,6 +59,24 @@ def scrape_matches():
     except Exception as e:
         logger.error(f"Fehler beim Scraping: {e}")
         raise
+
+
+def generate_documents(matches_data):
+    """Generiert DOCX-Dokumente aus Match-Daten"""
+
+    logger.info("=== DFB Spesen Generator: Erstelle Dokumente ===")
+
+    # Pfade
+    project_root = Path(__file__).parent.parent
+    template_path = project_root / "src" / "data" / "Spesenabrechnung_Vorlage.docx"
+    output_dir = project_root / "output"
+
+    # Generiere Dokumente
+    generator = SpesenGenerator(template_path, output_dir)
+    generated_files = generator.generate_all_documents(matches_data)
+
+    logger.info(f"✓ Fertig! {len(generated_files)} Dokumente erstellt in: {output_dir}")
+    return generated_files
 
 
 def test_navigation():
@@ -142,9 +161,18 @@ def test_navigation():
 
 
 def main():
-    """Hauptprogramm"""
-    # Scrape alle Spiele
-    scrape_matches()
+    """Hauptprogramm - Scrapt Daten und generiert Dokumente"""
+    # Schritt 1: Scrape alle Spiele
+    matches_data = scrape_matches()
+
+    if not matches_data:
+        logger.error("Keine Daten gescrapt - Abbruch")
+        return
+
+    # Schritt 2: Generiere Dokumente
+    generate_documents(matches_data)
+
+    logger.info("=== Fertig! Alle Spesenabrechnung-Dokumente erstellt ===")
 
 
 if __name__ == "__main__":

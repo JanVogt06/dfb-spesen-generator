@@ -80,13 +80,13 @@ class DFBScraper:
 
             # Direkter, einfacherer Ansatz
             accept_button = self.page.locator('button:has-text("Alle akzeptieren")').first
-            accept_button.wait_for(state="visible", timeout=10000)
+            accept_button.wait_for(state="visible", timeout=20000)
 
             logger.info("Cookie-Banner gefunden, klicke...")
             accept_button.click()
 
             # Warte bis Banner weg ist
-            self.page.wait_for_timeout(2000)
+            self.page.wait_for_timeout(3000)
             logger.info("Cookies akzeptiert")
 
         except Exception as e:
@@ -112,10 +112,10 @@ class DFBScraper:
                 logger.info(f"Versuche Selektor: {selector}")
                 try:
                     login_button = self.page.locator(selector).first
-                    if login_button.is_visible(timeout=2000):
+                    if login_button.is_visible(timeout=3000):
                         logger.info(f"Anmelden-Button gefunden mit: {selector}")
                         login_button.click()
-                        self.page.wait_for_timeout(2000)
+                        self.page.wait_for_timeout(3000)
                         logger.info("Anmelden-Button geklickt")
                         return
                 except:
@@ -138,7 +138,7 @@ class DFBScraper:
 
         try:
             # Warte bis Login-Formular sichtbar ist
-            self.page.wait_for_selector('input[placeholder*="Benutzerkennung"], input[name*="username"]', timeout=10000)
+            self.page.wait_for_selector('input[placeholder*="Benutzerkennung"], input[name*="username"]', timeout=20000)
 
             # Benutzername eingeben
             username_field = self.page.locator('input[placeholder*="Benutzerkennung"], input[name*="username"]').first
@@ -157,7 +157,7 @@ class DFBScraper:
 
             # Warte und prüfe ob Login erfolgreich war
             logger.info("Warte auf Antwort vom Server...")
-            self.page.wait_for_timeout(5000)
+            self.page.wait_for_timeout(10000)
 
             # Prüfe mehrere Indikatoren für erfolgreichen Login
             current_url = self.page.url
@@ -171,7 +171,7 @@ class DFBScraper:
             # 2. Prüfung: Gibt es eine Fehlermeldung?
             try:
                 error_message = self.page.locator('.alert-error, .error, [class*="error"]').first
-                if error_message.is_visible(timeout=1000):
+                if error_message.is_visible(timeout=2000):
                     error_text = error_message.inner_text()
                     logger.error(f"Login-Fehler: {error_text}")
                     raise Exception(f"Login fehlgeschlagen: {error_text}")
@@ -179,7 +179,7 @@ class DFBScraper:
                 pass
 
             # 3. Prüfung: Ist Login-Formular noch sichtbar?
-            if self.page.locator('input[type="password"]').is_visible(timeout=2000):
+            if self.page.locator('input[type="password"]').is_visible(timeout=3000):
                 logger.error("Login fehlgeschlagen - Login-Formular noch sichtbar")
                 raise Exception("Login fehlgeschlagen - Bitte Credentials prüfen")
 
@@ -201,10 +201,10 @@ class DFBScraper:
             menu_button = self.page.locator('#dfb-Menu-toggle, button[ng-click*="menuBtnClicked"]').first
 
             # Prüfe ob Button existiert und sichtbar ist
-            if menu_button.is_visible(timeout=2000):
+            if menu_button.is_visible(timeout=3000):
                 logger.info("Menü-Button gefunden, klicke...")
                 menu_button.click()
-                self.page.wait_for_timeout(1000)
+                self.page.wait_for_timeout(2000)
                 logger.info("Menü geöffnet")
             else:
                 logger.info("Menü-Button nicht sichtbar - Menü bereits offen")
@@ -220,16 +220,16 @@ class DFBScraper:
         try:
             # Schritt 1: Auf "Schiriansetzung" klicken
             schiri_menu = self.page.locator('text=Schiriansetzung').first
-            schiri_menu.wait_for(state="visible", timeout=5000)
+            schiri_menu.wait_for(state="visible", timeout=10000)
             logger.info("Schiriansetzung-Menüpunkt gefunden, klicke...")
             schiri_menu.click()
 
             # Warte bis Untermenü erscheint
-            self.page.wait_for_timeout(1000)
+            self.page.wait_for_timeout(2000)
 
             # Schritt 2: Auf "Eigene Daten" klicken
             eigene_daten = self.page.locator('text=Eigene Daten').first
-            eigene_daten.wait_for(state="visible", timeout=5000)
+            eigene_daten.wait_for(state="visible", timeout=10000)
             logger.info("Eigene Daten gefunden, klicke...")
 
             # Neuen Tab erwarten
@@ -256,7 +256,7 @@ class DFBScraper:
 
         try:
             # Warte bis Spiele geladen sind
-            self.page.wait_for_timeout(2000)
+            self.page.wait_for_timeout(20000)
 
             # Finde alle Spiel-Container (jeder Container = 1 Spiel)
             match_containers = self.page.locator('sria-matches-match-list-item').all()
@@ -291,7 +291,7 @@ class DFBScraper:
             if mehr_info.is_visible():
                 mehr_info.click()
                 # Warte bis Modal geladen ist
-                self.page.wait_for_timeout(1000)
+                self.page.wait_for_timeout(2000)
                 logger.info("Mehr Info Modal geöffnet")
             else:
                 raise Exception("Mehr Info Button nicht sichtbar")
@@ -308,21 +308,21 @@ class DFBScraper:
             # Suche nach dem Schließen-Button (X)
             close_button = self.page.locator('button[aria-label="Close"], .modal-close, [class*="close"]').first
 
-            if close_button.is_visible(timeout=2000):
+            if close_button.is_visible(timeout=3000):
                 close_button.click()
-                self.page.wait_for_timeout(500)
+                self.page.wait_for_timeout(1000)
                 logger.info("Modal geschlossen")
             else:
                 # Alternative: ESC-Taste drücken
                 self.page.keyboard.press('Escape')
-                self.page.wait_for_timeout(500)
+                self.page.wait_for_timeout(1000)
                 logger.info("Modal mit ESC geschlossen")
 
         except Exception as e:
             logger.warning(f"Fehler beim Schließen des Modals: {e}")
             # Versuche ESC als Fallback
             self.page.keyboard.press('Escape')
-            self.page.wait_for_timeout(500)
+            self.page.wait_for_timeout(1000)
 
     def extract_match_info_from_modal(self):
         """Extrahiert Spielinformationen aus dem geöffneten 'Mehr Info' Modal"""
@@ -333,37 +333,37 @@ class DFBScraper:
 
             # Anpfiff (Datum + Uhrzeit)
             anpfiff = self.page.locator('text=/Samstag|Sonntag|Montag|Dienstag|Mittwoch|Donnerstag|Freitag/').first
-            if anpfiff.is_visible(timeout=2000):
+            if anpfiff.is_visible(timeout=3000):
                 match_info['anpfiff'] = anpfiff.inner_text().strip()
 
             # Heim-Team
             heim_team = self.page.locator('text=Heim').locator('..').locator('.fw-700').first
-            if heim_team.is_visible(timeout=1000):
+            if heim_team.is_visible(timeout=2000):
                 match_info['heim_team'] = heim_team.inner_text().strip()
 
             # Gast-Team
             gast_team = self.page.locator('text=Gast').locator('..').locator('.fw-700').first
-            if gast_team.is_visible(timeout=1000):
+            if gast_team.is_visible(timeout=2000):
                 match_info['gast_team'] = gast_team.inner_text().strip()
 
             # Mannschaftsart
             mannschaftsart = self.page.locator('text=Mannschaftsart').locator('..').locator('.fw-700').first
-            if mannschaftsart.is_visible(timeout=1000):
+            if mannschaftsart.is_visible(timeout=2000):
                 match_info['mannschaftsart'] = mannschaftsart.inner_text().strip()
 
             # Spielklasse
             spielklasse = self.page.locator('text=Spielklasse').locator('..').locator('.fw-700').first
-            if spielklasse.is_visible(timeout=1000):
+            if spielklasse.is_visible(timeout=2000):
                 match_info['spielklasse'] = spielklasse.inner_text().strip()
 
             # Staffel
             staffel = self.page.locator('text=Staffel').locator('..').locator('.fw-700').first
-            if staffel.is_visible(timeout=1000):
+            if staffel.is_visible(timeout=2000):
                 match_info['staffel'] = staffel.inner_text().strip()
 
             # Spieltag
             spieltag = self.page.locator('text=Spieltag').locator('..').locator('.fw-700').first
-            if spieltag.is_visible(timeout=1000):
+            if spieltag.is_visible(timeout=2000):
                 match_info['spieltag'] = spieltag.inner_text().strip()
 
             return match_info
@@ -390,7 +390,7 @@ class DFBScraper:
 
             if referee_modal.is_visible():
                 referee_modal.click()
-                self.page.wait_for_timeout(1000)
+                self.page.wait_for_timeout(2000)
                 logger.info("Schiedsrichter-Modal geöffnet")
             else:
                 raise Exception("Schiedsrichter-Modal Button nicht sichtbar")
@@ -415,7 +415,7 @@ class DFBScraper:
 
                     # Rolle und Name aus dem ersten fw-700 div (z.B. "SR Louis Gaudes" oder "SRA 1 Jan Vogt")
                     header = item.locator('.mb-2.fw-700').first
-                    if header.is_visible(timeout=500):
+                    if header.is_visible(timeout=1000):
                         header_text = header.inner_text().strip()
                         # Parse "SR Louis Gaudes" oder "SRA 1 Jan Vogt"
                         parts = header_text.split(maxsplit=2)
@@ -434,32 +434,32 @@ class DFBScraper:
                     if telefon_row.count() > 0:
                         # Nimm die erste Telefonnummer die wir finden
                         telefon_elem = telefon_row.first.locator('..').locator('.col-7, .col-sm-6').last
-                        if telefon_elem.is_visible(timeout=500):
+                        if telefon_elem.is_visible(timeout=1000):
                             telefon_link = telefon_elem.locator('a')
-                            if telefon_link.is_visible(timeout=500):
+                            if telefon_link.is_visible(timeout=1000):
                                 referee_data['telefon'] = telefon_link.inner_text().strip()
 
                     # E-Mail
                     email_row = item.locator('text=E-Mail').locator('..')
-                    if email_row.is_visible(timeout=500):
+                    if email_row.is_visible(timeout=1000):
                         email_col = email_row.locator('.col-7, .col-sm-6').last
-                        if email_col.is_visible(timeout=500):
+                        if email_col.is_visible(timeout=1000):
                             email_link = email_col.locator('a')
-                            if email_link.is_visible(timeout=500):
+                            if email_link.is_visible(timeout=1000):
                                 referee_data['email'] = email_link.inner_text().strip()
 
                     # Straße
                     strasse_row = item.locator('text=Straße, Nr.').locator('..')
-                    if strasse_row.is_visible(timeout=500):
+                    if strasse_row.is_visible(timeout=1000):
                         strasse_col = strasse_row.locator('.col-7, .col-sm-6').last
-                        if strasse_col.is_visible(timeout=500):
+                        if strasse_col.is_visible(timeout=1000):
                             referee_data['strasse'] = strasse_col.inner_text().strip()
 
                     # PLZ, Ort
                     plz_row = item.locator('text=PLZ, Ort').locator('..')
-                    if plz_row.is_visible(timeout=500):
+                    if plz_row.is_visible(timeout=1000):
                         plz_col = plz_row.locator('.col-7, .col-sm-6').last
-                        if plz_col.is_visible(timeout=500):
+                        if plz_col.is_visible(timeout=1000):
                             referee_data['plz_ort'] = plz_col.inner_text().strip()
 
                     if referee_data and 'rolle' in referee_data:
@@ -494,7 +494,7 @@ class DFBScraper:
 
             if venue_modal.is_visible():
                 venue_modal.click()
-                self.page.wait_for_timeout(1000)
+                self.page.wait_for_timeout(2000)
                 logger.info("Spielstätte-Modal geöffnet")
             else:
                 raise Exception("Spielstätte-Modal Button nicht sichtbar")
@@ -513,20 +513,20 @@ class DFBScraper:
             # Spielstätte Name - suche nach dem Text direkt unter der Überschrift
             # Der Name steht im Modal-Body, nach "SPIELSTÄTTE"
             venue_name_elem = self.page.locator('#modal-subtitle, .subtitle').first
-            if venue_name_elem.is_visible(timeout=1000):
+            if venue_name_elem.is_visible(timeout=2000):
                 venue_info['name'] = venue_name_elem.inner_text().strip()
 
             # Falls leer, versuche alternativen Selektor
             if not venue_info.get('name'):
                 # Suche nach dem span mit dem Venue-Namen (z.B. "BSA Ingolstadt Süd-Ost, Stadion")
                 venue_span = self.page.locator('dfb-geotag-icon').locator('..').locator('..').locator('span').first
-                if venue_span.is_visible(timeout=1000):
+                if venue_span.is_visible(timeout=2000):
                     venue_info['name'] = venue_span.inner_text().strip()
 
             # Adresse
             address = self.page.locator('dfb-geotag-icon').locator('..').locator('..').locator('div').filter(
                 has_text='/Str|straße|platz/').first
-            if address.is_visible(timeout=1000):
+            if address.is_visible(timeout=2000):
                 venue_info['adresse'] = address.inner_text().strip()
             else:
                 # Alternativer Ansatz: Suche nach der Adresszeile
@@ -540,7 +540,7 @@ class DFBScraper:
 
             # Rasenplatz / Kunstrasen
             platz_typ = self.page.locator('text=/Rasenplatz|Kunstrasen|Hartplatz/').first
-            if platz_typ.is_visible(timeout=500):
+            if platz_typ.is_visible(timeout=1000):
                 venue_info['platz_typ'] = platz_typ.inner_text().strip()
 
             return venue_info
