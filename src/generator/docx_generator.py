@@ -219,6 +219,14 @@ class SpesenGenerator:
         sra1 = self._get_referee_by_role(schiedsrichter, 'SRA 1')
         sra2 = self._get_referee_by_role(schiedsrichter, 'SRA 2')
 
+        # Spielort mit allen drei Infos in separaten Zeilen
+        spielort_name = spielstaette.get('name', '')
+        spielort_adresse = spielstaette.get('adresse', '')
+        spielort_typ = spielstaette.get('platz_typ', '')
+
+        # Kombiniere mit Zeilenumbrüchen
+        spielort_komplett = f"{spielort_name}\n{spielort_adresse}\n{spielort_typ}"
+
         # Erstelle Replacements-Dictionary
         replacements = {
             # Checkboxen
@@ -231,7 +239,7 @@ class SpesenGenerator:
             'SPIELNUMMER': '',  # Wird später manuell eingetragen
             'DATUM': datum,
             'ANSTOSS': anstoss,
-            'SPIELORT': spielstaette.get('name', ''),
+            'SPIELORT': spielort_komplett,
 
             # Schiedsrichter (SR)
             'SR_NAME': sr.get('name', ''),
