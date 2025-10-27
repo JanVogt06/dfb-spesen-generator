@@ -325,47 +325,77 @@ class DFBScraper:
             self.page.wait_for_timeout(1000)
 
     def extract_match_info_from_modal(self):
-        """Extrahiert Spielinformationen aus dem geöffneten 'Mehr Info' Modal"""
+        """
+        Extrahiert Spielinformationen aus dem geöffneten 'Mehr Info' Modal.
+        WICHTIG: Sucht nur innerhalb des sichtbaren Modals!
+        """
         logger.info("Extrahiere Spielinformationen aus Modal...")
 
         try:
             match_info = {}
 
-            # Anpfiff (Datum + Uhrzeit)
-            anpfiff = self.page.locator('text=/Samstag|Sonntag|Montag|Dienstag|Mittwoch|Donnerstag|Freitag/').first
+            # WICHTIG: Wir suchen nur im Modal, nicht auf der ganzen Seite!
+            # Das Modal hat die Klasse 'dfb-modal'
+            modal = self.page.locator('.dfb-modal').first
+
+            # Warte kurz bis Modal vollständig geladen ist
+            modal.wait_for(state="visible", timeout=3000)
+
+            # Anpfiff (Datum + Uhrzeit) - NUR im Modal suchen
+            anpfiff = modal.locator('.kickoff .fw-700').first
             if anpfiff.is_visible(timeout=3000):
                 match_info['anpfiff'] = anpfiff.inner_text().strip()
 
-            # Heim-Team
-            heim_team = self.page.locator('text=Heim').locator('..').locator('.fw-700').first
-            if heim_team.is_visible(timeout=2000):
-                match_info['heim_team'] = heim_team.inner_text().strip()
+            # Heim-Team - Präziser Selektor: Suche nach dem div mit "Heim" und dann dem nachfolgenden fw-700 span
+            heim_section = modal.locator('div.text-color-grey-5:has-text("Heim")').first
+            if heim_section.is_visible(timeout=2000):
+                # Gehe zum Elternelement und finde das fw-700 span mit dem Teamnamen
+                heim_parent = heim_section.locator('..')
+                heim_team = heim_parent.locator('.fs-lg.fw-700 span').first
+                if heim_team.is_visible(timeout=2000):
+                    match_info['heim_team'] = heim_team.inner_text().strip()
 
-            # Gast-Team
-            gast_team = self.page.locator('text=Gast').locator('..').locator('.fw-700').first
-            if gast_team.is_visible(timeout=2000):
-                match_info['gast_team'] = gast_team.inner_text().strip()
+            # Gast-Team - Gleiches Prinzip
+            gast_section = modal.locator('div.text-color-grey-5:has-text("Gast")').first
+            if gast_section.is_visible(timeout=2000):
+                gast_parent = gast_section.locator('..')
+                gast_team = gast_parent.locator('.fs-lg.fw-700 span').first
+                if gast_team.is_visible(timeout=2000):
+                    match_info['gast_team'] = gast_team.inner_text().strip()
 
-            # Mannschaftsart
-            mannschaftsart = self.page.locator('text=Mannschaftsart').locator('..').locator('.fw-700').first
-            if mannschaftsart.is_visible(timeout=2000):
-                match_info['mannschaftsart'] = mannschaftsart.inner_text().strip()
+            # Mannschaftsart - Suche nach dem Label und nimm das nächste fw-700 Element
+            mannschaftsart_label = modal.locator('div.text-color-grey-5:has-text("Mannschaftsart")').first
+            if mannschaftsart_label.is_visible(timeout=2000):
+                mannschaftsart_parent = mannschaftsart_label.locator('..')
+                mannschaftsart = mannschaftsart_parent.locator('.fw-700').first
+                if mannschaftsart.is_visible(timeout=2000):
+                    match_info['mannschaftsart'] = mannschaftsart.inner_text().strip()
 
             # Spielklasse
-            spielklasse = self.page.locator('text=Spielklasse').locator('..').locator('.fw-700').first
-            if spielklasse.is_visible(timeout=2000):
-                match_info['spielklasse'] = spielklasse.inner_text().strip()
+            spielklasse_label = modal.locator('div.text-color-grey-5:has-text("Spielklasse")').first
+            if spielklasse_label.is_visible(timeout=2000):
+                spielklasse_parent = spielklasse_label.locator('..')
+                spielklasse = spielklasse_parent.locator('.fw-700').first
+                if spielklasse.is_visible(timeout=2000):
+                    match_info['spielklasse'] = spielklasse.inner_text().strip()
 
             # Staffel
-            staffel = self.page.locator('text=Staffel').locator('..').locator('.fw-700').first
-            if staffel.is_visible(timeout=2000):
-                match_info['staffel'] = staffel.inner_text().strip()
+            staffel_label = modal.locator('div.text-color-grey-5:has-text("Staffel")').first
+            if staffel_label.is_visible(timeout=2000):
+                staffel_parent = staffel_label.locator('..')
+                staffel = staffel_parent.locator('.fw-700').first
+                if staffel.is_visible(timeout=2000):
+                    match_info['staffel'] = staffel.inner_text().strip()
 
             # Spieltag
-            spieltag = self.page.locator('text=Spieltag').locator('..').locator('.fw-700').first
-            if spieltag.is_visible(timeout=2000):
-                match_info['spieltag'] = spieltag.inner_text().strip()
+            spieltag_label = modal.locator('div.text-color-grey-5:has-text("Spieltag")').first
+            if spieltag_label.is_visible(timeout=2000):
+                spieltag_parent = spieltag_label.locator('..')
+                spieltag = spieltag_parent.locator('.fw-700').first
+                if spieltag.is_visible(timeout=2000):
+                    match_info['spieltag'] = spieltag.inner_text().strip()
 
+            logger.info(f"Extrahiert: {match_info.get('heim_team', '?')} vs {match_info.get('gast_team', '?')}")
             return match_info
 
         except Exception as e:
@@ -400,14 +430,21 @@ class DFBScraper:
             raise
 
     def extract_referee_contacts(self):
-        """Extrahiert Schiedsrichter-Kontaktdaten aus dem geöffneten Modal"""
+        """
+        Extrahiert Schiedsrichter-Kontaktdaten aus dem geöffneten Modal.
+        WICHTIG: Sucht nur innerhalb des sichtbaren Modals!
+        """
         logger.info("Extrahiere Schiedsrichter-Kontakte...")
 
         try:
             referees = []
 
-            # Finde alle Schiedsrichter-Blöcke
-            referee_items = self.page.locator('sria-matches-referee-contact-details-list-item').all()
+            # WICHTIG: Nur im Modal suchen!
+            modal = self.page.locator('.modal.show, [role="dialog"]').first
+            modal.wait_for(state="visible", timeout=3000)
+
+            # Finde alle Schiedsrichter-Blöcke NUR im Modal
+            referee_items = modal.locator('sria-matches-referee-contact-details-list-item').all()
 
             for item in referee_items:
                 try:
@@ -504,33 +541,39 @@ class DFBScraper:
             raise
 
     def extract_venue_info(self):
-        """Extrahiert Spielstätten-Informationen aus dem geöffneten Modal"""
+        """
+        Extrahiert Spielstätten-Informationen aus dem geöffneten Modal.
+        WICHTIG: Sucht nur innerhalb des sichtbaren Modals!
+        """
         logger.info("Extrahiere Spielstätten-Informationen...")
 
         try:
             venue_info = {}
 
-            # Spielstätte Name - suche nach dem Text direkt unter der Überschrift
-            # Der Name steht im Modal-Body, nach "SPIELSTÄTTE"
-            venue_name_elem = self.page.locator('#modal-subtitle, .subtitle').first
+            # WICHTIG: Nur im Modal suchen!
+            modal = self.page.locator('.modal.show, [role="dialog"]').first
+            modal.wait_for(state="visible", timeout=3000)
+
+            # Spielstätte Name - suche im Modal nach dem Subtitle
+            venue_name_elem = modal.locator('#modal-subtitle, .subtitle').first
             if venue_name_elem.is_visible(timeout=2000):
                 venue_info['name'] = venue_name_elem.inner_text().strip()
 
-            # Falls leer, versuche alternativen Selektor
+            # Falls leer, versuche alternativen Selektor im Modal
             if not venue_info.get('name'):
-                # Suche nach dem span mit dem Venue-Namen (z.B. "BSA Ingolstadt Süd-Ost, Stadion")
-                venue_span = self.page.locator('dfb-geotag-icon').locator('..').locator('..').locator('span').first
+                # Suche nach dem span mit dem Venue-Namen
+                venue_span = modal.locator('dfb-geotag-icon').locator('..').locator('..').locator('span').first
                 if venue_span.is_visible(timeout=2000):
                     venue_info['name'] = venue_span.inner_text().strip()
 
-            # Adresse
-            address = self.page.locator('dfb-geotag-icon').locator('..').locator('..').locator('div').filter(
+            # Adresse - NUR im Modal
+            address = modal.locator('dfb-geotag-icon').locator('..').locator('..').locator('div').filter(
                 has_text='/Str|straße|platz/').first
             if address.is_visible(timeout=2000):
                 venue_info['adresse'] = address.inner_text().strip()
             else:
-                # Alternativer Ansatz: Suche nach der Adresszeile
-                address_lines = self.page.locator('text=/\\d{5}/').all()  # Suche nach PLZ (5 Ziffern)
+                # Alternativer Ansatz: Suche nach der Adresszeile im Modal
+                address_lines = modal.locator('text=/\\d{5}/').all()  # Suche nach PLZ (5 Ziffern)
                 if address_lines:
                     for line in address_lines:
                         text = line.inner_text().strip()
@@ -538,11 +581,12 @@ class DFBScraper:
                             venue_info['adresse'] = text
                             break
 
-            # Rasenplatz / Kunstrasen
-            platz_typ = self.page.locator('text=/Rasenplatz|Kunstrasen|Hartplatz/').first
+            # Rasenplatz / Kunstrasen - NUR im Modal
+            platz_typ = modal.locator('text=/Rasenplatz|Kunstrasen|Hartplatz/').first
             if platz_typ.is_visible(timeout=1000):
                 venue_info['platz_typ'] = platz_typ.inner_text().strip()
 
+            logger.info(f"Extrahiert: {venue_info.get('name', '?')}")
             return venue_info
 
         except Exception as e:
@@ -578,7 +622,8 @@ class DFBScraper:
                 self.close_modal()
 
                 all_matches.append(match_data)
-                logger.info(f"Spiel {i + 1} erfolgreich verarbeitet")
+                logger.info(
+                    f"✓ Spiel {i + 1}: {match_data.get('spiel_info', {}).get('heim_team', '?')} vs {match_data.get('spiel_info', {}).get('gast_team', '?')}")
 
             except Exception as e:
                 logger.error(f"Fehler bei Spiel {i + 1}: {e}")

@@ -142,6 +142,7 @@ class SpesenGenerator:
     def _replace_placeholders(self, doc: Document, replacements: dict):
         """
         Ersetzt Platzhalter in allen Paragraphs und Tabellen.
+        WICHTIG: Diese Methode modifiziert das übergebene Document-Objekt direkt!
 
         Args:
             doc: Document-Objekt
@@ -150,10 +151,21 @@ class SpesenGenerator:
         # Ersetze in Paragraphs
         for paragraph in doc.paragraphs:
             for key, value in replacements.items():
-                if f"{{{{{key}}}}}" in paragraph.text:
-                    for run in paragraph.runs:
-                        if f"{{{{{key}}}}}" in run.text:
-                            run.text = run.text.replace(f"{{{{{key}}}}}", str(value))
+                placeholder = f"{{{{{key}}}}}"
+                if placeholder in paragraph.text:
+                    # WICHTIG: Durchlaufe runs rückwärts, um sie zusammenzufassen
+                    full_text = paragraph.text
+                    if placeholder in full_text:
+                        # Ersetze im kompletten Text
+                        new_text = full_text.replace(placeholder, str(value))
+
+                        # Lösche alle runs außer dem ersten
+                        for run in paragraph.runs[1:]:
+                            run.text = ''
+
+                        # Setze neuen Text im ersten run
+                        if paragraph.runs:
+                            paragraph.runs[0].text = new_text
 
         # Ersetze in Tabellen
         for table in doc.tables:
@@ -161,14 +173,25 @@ class SpesenGenerator:
                 for cell in row.cells:
                     for paragraph in cell.paragraphs:
                         for key, value in replacements.items():
-                            if f"{{{{{key}}}}}" in paragraph.text:
-                                for run in paragraph.runs:
-                                    if f"{{{{{key}}}}}" in run.text:
-                                        run.text = run.text.replace(f"{{{{{key}}}}}", str(value))
+                            placeholder = f"{{{{{key}}}}}"
+                            if placeholder in paragraph.text:
+                                # Gleicher Ansatz wie oben
+                                full_text = paragraph.text
+                                if placeholder in full_text:
+                                    new_text = full_text.replace(placeholder, str(value))
+
+                                    # Lösche alle runs außer dem ersten
+                                    for run in paragraph.runs[1:]:
+                                        run.text = ''
+
+                                    # Setze neuen Text im ersten run
+                                    if paragraph.runs:
+                                        paragraph.runs[0].text = new_text
 
     def generate_document(self, match_data: dict, output_filename: str = None) -> Path:
         """
         Generiert ein ausgefülltes Dokument für ein Spiel.
+        WICHTIG: Lädt die Vorlage für JEDES Spiel NEU!
 
         Args:
             match_data: Spieldaten aus JSON
@@ -181,8 +204,9 @@ class SpesenGenerator:
         schiedsrichter = match_data.get('schiedsrichter', [])
         spielstaette = match_data.get('spielstaette', {})
 
-        # Lade Vorlage
+        # WICHTIG: Lade die Vorlage für JEDES neue Dokument NEU!
         doc = Document(self.template_path)
+        logger.debug(f"Neue Vorlage geladen für: {spiel_info.get('heim_team', '')} vs {spiel_info.get('gast_team', '')}")
 
         # Datum und Uhrzeit parsen
         datum, anstoss = self._parse_anpfiff(spiel_info.get('anpfiff', ''))
@@ -262,6 +286,7 @@ class SpesenGenerator:
         generated_files = []
         for i, match_data in enumerate(matches_data, 1):
             try:
+                logger.info(f"[{i}/{len(matches_data)}] Verarbeite: {match_data.get('spiel_info', {}).get('heim_team', 'Unbekannt')} vs {match_data.get('spiel_info', {}).get('gast_team', 'Unbekannt')}")
                 output_path = self.generate_document(match_data)
                 generated_files.append(output_path)
                 logger.info(f"[{i}/{len(matches_data)}] ✓ Erstellt")
