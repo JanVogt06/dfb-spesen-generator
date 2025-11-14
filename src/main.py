@@ -40,6 +40,9 @@ def scrape_matches_with_session(session_path: Path = None):
         session_mgr = SessionManager()
         session_path = session_mgr.create_session()
 
+    # Session Manager für Updates
+    session_mgr = SessionManager()
+
     # Credentials aus .env laden
     username = os.getenv("DFB_USERNAME")
     password = os.getenv("DFB_PASSWORD")
@@ -51,6 +54,12 @@ def scrape_matches_with_session(session_path: Path = None):
     try:
         with DFBScraper(headless=False, username=username, password=password) as scraper:
             # Navigation und Login
+            session_mgr.update_session_metadata(
+                session_path,
+                status="scraping",
+                progress={"current": 0, "total": 0, "step": "Login und Navigation..."}
+            )
+
             scraper.open_dfbnet()
             scraper.accept_cookies()
             scraper.click_login()
@@ -60,8 +69,17 @@ def scrape_matches_with_session(session_path: Path = None):
             scraper.open_menu_if_needed()
             scraper.navigate_to_schiriansetzung()
 
-            # Alle Spiele scrapen
-            all_matches = scraper.scrape_all_matches()
+            # Progress Callback für Scraping
+            def update_scraping_progress(current, total, step):
+                session_mgr.update_session_metadata(
+                    session_path,
+                    status="scraping",
+                    progress={"current": current, "total": total, "step": step}
+                )
+                logger.info(f"Progress: {current}/{total} - {step}")
+
+            # Alle Spiele scrapen MIT Progress-Callback
+            all_matches = scraper.scrape_all_matches(progress_callback=update_scraping_progress)
 
             # Daten in Session speichern
             output_file = session_path / "spesen_data.json"
@@ -75,6 +93,10 @@ def scrape_matches_with_session(session_path: Path = None):
 
     except Exception as e:
         logger.error(f"Fehler beim Scraping: {e}")
+        session_mgr.update_session_metadata(
+            session_path,
+            status="failed"
+        )
         raise
 
 
@@ -88,19 +110,53 @@ def generate_documents_in_session(matches_data, session_path: Path):
     """
     logger.info("=== DFB Spesen Generator: Erstelle Dokumente ===")
 
+    # Session Manager für Updates
+    session_mgr = SessionManager()
+
+    # Update: Starting document generation
+    session_mgr.update_session_metadata(
+        session_path,
+        status="generating",
+        progress={"current": 0, "total": len(matches_data), "step": "Erstelle Dokumente..."}
+    )
+
     # Pfade
     project_root = Path(__file__).parent.parent
     template_path = project_root / "src" / "data" / "Spesenabrechnung_Vorlage.docx"
 
     # Generiere Dokumente im Session-Ordner
     generator = SpesenGenerator(template_path, session_path)
-    generated_files = generator.generate_all_documents(matches_data)
+    generated_files = []
+
+    for i, match_data in enumerate(matches_data, 1):
+        try:
+            output_path = generator.generate_document(match_data)
+            generated_files.append(output_path)
+
+            # Update progress nach jedem Dokument
+            session_mgr.update_session_metadata(
+                session_path,
+                status="generating",
+                progress={
+                    "current": i,
+                    "total": len(matches_data),
+                    "step": f"Dokument {i}/{len(matches_data)} erstellt"
+                }
+            )
+
+        except Exception as e:
+            logger.error(f"Fehler bei Dokument {i}: {e}")
+            continue
 
     # Session-Metadata aktualisieren
-    session_mgr = SessionManager()
     files = [f.name for f in generated_files]
     files.append("spesen_data.json")
-    session_mgr.update_session_metadata(session_path, status="completed", files=files)
+    session_mgr.update_session_metadata(
+        session_path,
+        status="completed",
+        files=files,
+        progress={"current": len(matches_data), "total": len(matches_data), "step": "Abgeschlossen!"}
+    )
 
     logger.info(f"Fertig! {len(generated_files)} Dokumente erstellt in: {session_path}")
     return generated_files

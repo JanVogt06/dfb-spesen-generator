@@ -626,12 +626,21 @@ class DFBScraper:
             logger.error(f"Fehler beim Extrahieren der Spielstätten-Info: {e}")
             return {}
 
-    def scrape_all_matches(self):
-        """Scrapt alle Spiele und sammelt die Daten"""
+    def scrape_all_matches(self, progress_callback=None):
+        """
+        Scrapt alle Spiele und sammelt die Daten
+
+        Args:
+            progress_callback: Optional callback function(current, total, step) für Fortschritts-Updates
+        """
         logger.info("=== Starte Scraping aller Spiele ===")
 
         all_matches = []
         anzahl_spiele = self.get_all_matches()
+
+        # Initial progress
+        if progress_callback:
+            progress_callback(0, anzahl_spiele, "Scraping gestartet...")
 
         for i in range(anzahl_spiele):
             logger.info(f"--- Verarbeite Spiel {i + 1}/{anzahl_spiele} ---")
@@ -657,6 +666,10 @@ class DFBScraper:
                 all_matches.append(match_data)
                 logger.info(
                     f"✓ Spiel {i + 1}: {match_data.get('spiel_info', {}).get('heim_team', '?')} vs {match_data.get('spiel_info', {}).get('gast_team', '?')}")
+
+                #Progress update nach jedem gescrapten Spiel
+                if progress_callback:
+                    progress_callback(i + 1, anzahl_spiele, f"Scraping Spiel {i + 1}/{anzahl_spiele}")
 
             except Exception as e:
                 logger.error(f"Fehler bei Spiel {i + 1}: {e}")

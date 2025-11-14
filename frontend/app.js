@@ -89,7 +89,16 @@ async function waitForCompletion(sessionId) {
 
             const data = await response.json();
 
+            // Update progress bar with real data
+            if (data.progress) {
+                updateProgressBar(data.progress);
+            }
+
             if (data.status === 'completed') {
+                // Set to 100% before showing success
+                updateProgressBar({ current: 100, total: 100, step: "Abgeschlossen!" });
+                await sleep(500); // Short delay to show 100%
+
                 showStatus(`Erfolgreich! ${data.files.length} Dokumente generiert`, 'success');
                 await loadMatchesData(sessionId);
                 hideLoadingScreen();
@@ -109,6 +118,38 @@ async function waitForCompletion(sessionId) {
     }
 
     throw new Error('Timeout - Generierung dauert zu lange');
+}
+
+function updateProgressBar(progress) {
+    const progressBar = document.getElementById('progressBar');
+    const loadingText = document.querySelector('.loading-content p');
+
+    if (!progress) return;
+
+    const { current, total, step } = progress;
+
+    // Calculate percentage
+    let percentage = 0;
+    if (total > 0) {
+        percentage = Math.min(100, Math.round((current / total) * 100));
+    } else if (current > 0) {
+        // If we don't know total yet, show indeterminate progress
+        percentage = 50;
+    }
+
+    // Update progress bar width
+    progressBar.style.width = `${percentage}%`;
+    progressBar.style.animation = 'none'; // Remove CSS animation
+    progressBar.style.transition = 'width 0.3s ease';
+
+    // Update text
+    if (step) {
+        if (total > 0) {
+            loadingText.textContent = `${step} (${current}/${total})`;
+        } else {
+            loadingText.textContent = step;
+        }
+    }
 }
 
 async function loadMatchesData(sessionId) {
@@ -329,7 +370,14 @@ function hideWelcomeScreen() {
 }
 
 function showLoadingScreen() {
-    document.getElementById('loadingScreen').style.display = 'flex';
+    const loadingScreen = document.getElementById('loadingScreen');
+    const progressBar = document.getElementById('progressBar');
+
+    // Reset progress bar
+    progressBar.style.width = '0%';
+    progressBar.style.animation = 'none';
+
+    loadingScreen.style.display = 'flex';
 }
 
 function hideLoadingScreen() {

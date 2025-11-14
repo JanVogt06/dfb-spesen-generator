@@ -6,7 +6,7 @@ import secrets
 from datetime import datetime
 from pathlib import Path
 import json
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from utils.logger import setup_logger
 
@@ -48,7 +48,12 @@ class SessionManager:
             "session_id": session_name,
             "created_at": datetime.now().isoformat(),
             "status": "in_progress",
-            "files": []
+            "files": [],
+            "progress": {
+                "current": 0,
+                "total": 0,
+                "step": "Initialisierung..."
+            }
         }
 
         metadata_path = session_path / "metadata.json"
@@ -58,7 +63,13 @@ class SessionManager:
         logger.info(f"Session erstellt: {session_name}")
         return session_path
 
-    def update_session_metadata(self, session_path: Path, status: str = None, files: List[str] = None):
+    def update_session_metadata(
+        self,
+        session_path: Path,
+        status: str = None,
+        files: List[str] = None,
+        progress: Dict = None
+    ):
         """
         Aktualisiert die Metadata einer Session.
 
@@ -66,6 +77,7 @@ class SessionManager:
             session_path: Pfad zum Session-Ordner
             status: Neuer Status (optional)
             files: Liste der generierten Dateien (optional)
+            progress: Fortschritts-Info (optional) - Dict mit current, total, step
         """
         metadata_path = session_path / "metadata.json"
 
@@ -78,6 +90,8 @@ class SessionManager:
             metadata["status"] = status
         if files:
             metadata["files"] = files
+        if progress:
+            metadata["progress"] = progress
 
         metadata["updated_at"] = datetime.now().isoformat()
 
@@ -119,7 +133,7 @@ class SessionManager:
 
         return files
 
-    def get_session_by_id(self, session_id: str) -> Path:
+    def get_session_by_id(self, session_id: str) -> Optional[Path]:
         """
         Findet Session-Ordner anhand der Session-ID.
 

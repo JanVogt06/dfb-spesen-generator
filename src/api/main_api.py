@@ -61,6 +61,7 @@ class SessionResponse(BaseModel):
     files: List[Dict]
     download_all_url: str
     created_at: str
+    progress: Optional[Dict] = None
 
 
 def run_generation_process(session_path: Path):
@@ -74,10 +75,27 @@ def run_generation_process(session_path: Path):
     try:
         process_logger.info(f"Starte Generierung für Session: {session_path.name}")
 
+        # Session Manager im Prozess initialisieren
+        sm = SessionManager(base_output_dir="output")
+
+        # Update: Scraping started
+        sm.update_session_metadata(
+            session_path,
+            status="scraping",
+            progress={"current": 0, "total": 0, "step": "Scraping gestartet..."}
+        )
+
         # Nutze die bestehende Funktion aus main.py
         matches_data, _ = scrape_matches_with_session(session_path)
 
         if matches_data:
+            # Update: Documents generation started
+            sm.update_session_metadata(
+                session_path,
+                status="generating",
+                progress={"current": 0, "total": len(matches_data), "step": "Erstelle Dokumente..."}
+            )
+
             # Nutze die bestehende Funktion aus main.py
             generate_documents_in_session(matches_data, session_path)
             process_logger.info(f"Session {session_path.name} erfolgreich abgeschlossen")
@@ -121,7 +139,8 @@ async def generate_spesen(request: GenerateRequest):
         status="in_progress",
         files=[],
         download_all_url=f"/api/download/{session_id}/all",
-        created_at=datetime.now().isoformat()
+        created_at=datetime.now().isoformat(),
+        progress={"current": 0, "total": 0, "step": "Starte..."}
     )
 
 
@@ -146,7 +165,8 @@ async def get_session_status(session_id: str):
         status=metadata.get("status", "unknown"),
         files=files,
         download_all_url=f"/api/download/{session_id}/all",
-        created_at=metadata.get("created_at", "")
+        created_at=metadata.get("created_at", ""),
+        progress=metadata.get("progress")
     )
 
 
@@ -189,20 +209,39 @@ async def download_all_as_zip(session_id: str):
     if not session_path:
         raise HTTPException(status_code=404, detail="Session nicht gefunden")
 
+    # Prüfe ob Dateien existieren
+    docx_files = list(session_path.glob("*.docx"))
+    if not docx_files:
+        raise HTTPException(status_code=404, detail="Keine DOCX-Dateien gefunden")
+
     zip_path = session_path / f"spesen_{session_id}.zip"
 
-    with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
-        for docx in session_path.glob("*.docx"):
-            zipf.write(docx, docx.name)
-        json_file = session_path / "spesen_data.json"
-        if json_file.exists():
-            zipf.write(json_file, json_file.name)
+    try:
+        with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+            # Füge alle DOCX-Dateien hinzu
+            for docx in docx_files:
+                zipf.write(docx, docx.name)
+                logger.info(f"Added to ZIP: {docx.name}")
 
-    return FileResponse(
-        path=zip_path,
-        filename=f"spesen_{datetime.now().strftime('%Y%m%d')}.zip",
-        media_type="application/zip"
-    )
+            # Füge JSON hinzu falls vorhanden
+            json_file = session_path / "spesen_data.json"
+            if json_file.exists():
+                zipf.write(json_file, json_file.name)
+                logger.info(f"Added to ZIP: {json_file.name}")
+
+        if not zip_path.exists():
+            raise HTTPException(status_code=500, detail="ZIP-Erstellung fehlgeschlagen")
+
+        logger.info(f"ZIP created: {zip_path}")
+
+        return FileResponse(
+            path=str(zip_path),
+            filename=f"spesen_{datetime.now().strftime('%Y%m%d')}.zip",
+            media_type="application/zip"
+        )
+    except Exception as e:
+        logger.error(f"ZIP creation error: {e}")
+        raise HTTPException(status_code=500, detail=f"Fehler beim Erstellen der ZIP: {str(e)}")
 
 
 @app.get("/")
