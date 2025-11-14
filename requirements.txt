@@ -7,9 +7,10 @@ playwright==1.48.0
 beautifulsoup4==4.12.3
 lxml==5.3.0
 
-# DOCX Generation (für später)
+# DOCX Generation
 python-docx==1.1.2
 
-# FastAPI & Web (für später)
-# fastapi>=0.104.0
-# uvicorn>=0.24.0
+# FastAPI & Web API
+fastapi==0.115.0
+uvicorn[standard]==0.32.0
+pydantic==2.9.2
