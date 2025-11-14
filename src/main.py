@@ -1,10 +1,13 @@
 """
 DFB Spesen Generator - Main Entry Point
+Startet automatisch Web-API und Frontend
 """
 import time
 import os
 import json
 import sys
+import webbrowser
+import threading
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -99,29 +102,55 @@ def generate_documents_in_session(matches_data, session_path: Path):
     files.append("spesen_data.json")
     session_mgr.update_session_metadata(session_path, status="completed", files=files)
 
-    logger.info(f"✓ Fertig! {len(generated_files)} Dokumente erstellt in: {session_path}")
+    logger.info(f"Fertig! {len(generated_files)} Dokumente erstellt in: {session_path}")
     return generated_files
 
 
+def open_browser():
+    """Öffnet den Browser nach kurzer Verzögerung"""
+    time.sleep(2)  # Warte bis Server gestartet ist
+    webbrowser.open('http://localhost:8080')
+    logger.info("Browser geöffnet: http://localhost:8080")
+
+
+def serve_frontend():
+    """Startet einen einfachen HTTP-Server für das Frontend"""
+    import http.server
+    import socketserver
+
+    frontend_dir = Path(__file__).parent.parent / "frontend"
+    os.chdir(frontend_dir)
+
+    PORT = 8080
+    Handler = http.server.SimpleHTTPRequestHandler
+
+    with socketserver.TCPServer(("", PORT), Handler) as httpd:
+        logger.info(f"Frontend-Server läuft auf http://localhost:{PORT}")
+        httpd.serve_forever()
+
+
 def main():
-    """Hauptprogramm - Scrapt Daten und generiert Dokumente in Session"""
-    # Schritt 1: Scrape alle Spiele in Session
-    matches_data, session_path = scrape_matches_with_session()
-
-    if not matches_data:
-        logger.error("Keine Daten gescrapt - Abbruch")
-        return
-
-    # Schritt 2: Generiere Dokumente in Session
-    generate_documents_in_session(matches_data, session_path)
-
-    logger.info(f"=== Fertig! Session erstellt: {session_path.name} ===")
-
-
-def run_api():
-    """Startet die FastAPI Anwendung"""
+    """
+    Startet die FastAPI Anwendung und das Frontend.
+    Dies ist jetzt der Standard-Modus.
+    """
     import uvicorn
-    logger.info("Starte Web-API...")
+
+    # Starte Frontend-Server in separatem Thread
+    frontend_thread = threading.Thread(target=serve_frontend, daemon=True)
+    frontend_thread.start()
+
+    # Öffne Browser in separatem Thread
+    browser_thread = threading.Thread(target=open_browser, daemon=True)
+    browser_thread.start()
+
+    logger.info("Starte DFB Spesen Generator...")
+    logger.info("==============================================")
+    logger.info("API läuft auf: http://localhost:8000")
+    logger.info("Frontend läuft auf: http://localhost:8080")
+    logger.info("==============================================")
+
+    # Starte API
     uvicorn.run(
         "api.main_api:app",
         host="0.0.0.0",
@@ -131,8 +160,4 @@ def run_api():
 
 
 if __name__ == "__main__":
-    # Prüfe ob API-Modus gewünscht ist
-    if len(sys.argv) > 1 and sys.argv[1] == "--api":
-        run_api()
-    else:
-        main()
+    main()
