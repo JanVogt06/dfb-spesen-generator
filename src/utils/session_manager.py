@@ -1,5 +1,6 @@
 """
-Session Manager - Verwaltet Session-basierte Ausgabeordner für Web-Anfragen
+Session Manager - Verwaltet Session-basierte Ausgabeordner fuer Web-Anfragen
+VERBESSERT: Findet automatisch das Projekt-Root
 """
 import os
 import secrets
@@ -13,19 +14,51 @@ from utils.logger import setup_logger
 logger = setup_logger("session_manager")
 
 
-class SessionManager:
-    """Verwaltet Session-Ordner für parallele Web-Anfragen"""
+def find_project_root() -> Path:
+    """
+    Findet das Projekt-Root-Verzeichnis (wo .env liegt).
+    Sucht von der aktuellen Datei aus nach oben.
+    """
+    current = Path(__file__).resolve()
 
-    def __init__(self, base_output_dir: str = "output"):
+    # Gehe von utils/session_manager.py aus nach oben
+    # utils/session_manager.py -> utils/ -> src/ -> projekt-root/
+    for parent in [current.parent, current.parent.parent, current.parent.parent.parent]:
+        # Pruefe ob .env oder .git existiert (typische Root-Marker)
+        if (parent / ".env").exists() or (parent / ".git").exists():
+            return parent
+
+    # Fallback: 2 Ebenen hoch von dieser Datei
+    # session_manager.py liegt in src/utils/
+    # -> src/utils/ -> src/ -> projekt-root/
+    return current.parent.parent.parent
+
+
+class SessionManager:
+    """Verwaltet Session-Ordner fuer parallele Web-Anfragen"""
+
+    def __init__(self, base_output_dir: str = None):
         """
         Initialisiert den Session Manager.
 
         Args:
-            base_output_dir: Basis-Verzeichnis für alle Sessions
+            base_output_dir: Basis-Verzeichnis fuer alle Sessions.
+                           Falls None oder relativ: Wird automatisch im Projekt-Root platziert.
         """
-        self.base_output_dir = Path(base_output_dir)
+        if base_output_dir is None:
+            base_output_dir = "output"
+
+        base_path = Path(base_output_dir)
+
+        # Wenn relativer Pfad: Kombiniere mit Projekt-Root
+        if not base_path.is_absolute():
+            project_root = find_project_root()
+            base_path = project_root / base_output_dir
+            logger.info(f"Relativer Pfad erkannt. Verwende Projekt-Root: {project_root}")
+
+        self.base_output_dir = base_path
         self.base_output_dir.mkdir(exist_ok=True, parents=True)
-        logger.info(f"Session Manager initialisiert mit Basis-Verzeichnis: {self.base_output_dir}")
+        logger.info(f"Session Manager initialisiert mit Basis-Verzeichnis: {self.base_output_dir.resolve()}")
 
     def create_session(self) -> Path:
         """
@@ -60,7 +93,7 @@ class SessionManager:
         with open(metadata_path, 'w', encoding='utf-8') as f:
             json.dump(metadata, f, ensure_ascii=False, indent=2)
 
-        logger.info(f"Session erstellt: {session_name}")
+        logger.info(f"Session erstellt: {session_name} in {session_path.resolve()}")
         return session_path
 
     def update_session_metadata(
@@ -99,11 +132,11 @@ class SessionManager:
         with open(metadata_path, 'w', encoding='utf-8') as f:
             json.dump(metadata, f, ensure_ascii=False, indent=2)
 
-        logger.info(f"Session Metadata aktualisiert: {session_path.name}")
+        logger.debug(f"Session Metadata aktualisiert: {session_path.name}")
 
     def get_session_files(self, session_path: Path) -> List[Dict[str, any]]:
         """
-        Gibt Liste aller Dateien in einer Session zurück.
+        Gibt Liste aller Dateien in einer Session zurueck.
 
         Args:
             session_path: Pfad zum Session-Ordner
