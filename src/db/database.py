@@ -1,29 +1,38 @@
 """
-Einfache SQLite Datenbank mit direkten SQL-Queries
-Keine komplizierten Libraries, nur Python standard sqlite3
+Database Modul - SQLite Datenbank fuer User und Sessions
 """
+import os
 import sqlite3
 from pathlib import Path
 from datetime import datetime, UTC
-from typing import Optional, List, Dict
-
-# Datenbank-Datei im Projekt-Root
-PROJECT_ROOT = Path(__file__).parent.parent.parent
-DB_PATH = PROJECT_ROOT / "app.db"
+from typing import Dict, List, Optional
 
 
-def get_connection():
-    """Erstellt Verbindung zur Datenbank"""
-    conn = sqlite3.connect(str(DB_PATH))
-    conn.row_factory = sqlite3.Row  # Ergebnisse als Dict zugreifbar
+# Datenbankpfad
+def get_db_path() -> Path:
+    """Gibt Datenbank-Pfad zurueck (aus .env oder Standard)"""
+    PROJECT_ROOT = Path(__file__).parent.parent.parent
+    db_path = os.getenv("DATABASE_PATH", PROJECT_ROOT / "app.db")
+    path = Path(db_path)
+
+    # Erstelle Verzeichnis falls nicht existiert
+    path.parent.mkdir(exist_ok=True, parents=True)
+
+    return path
+
+
+DB_PATH = get_db_path()
+
+
+def get_connection() -> sqlite3.Connection:
+    """Erstellt DB-Verbindung mit Row Factory"""
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
     return conn
 
 
 def init_database():
-    """
-    Erstellt die Datenbank-Tabellen falls nicht vorhanden.
-    Wird einmal beim Start aufgerufen.
-    """
+    """Initialisiert Datenbank-Tabellen"""
     conn = get_connection()
     cursor = conn.cursor()
 
@@ -121,7 +130,14 @@ def get_user_by_id(user_id: int) -> Optional[Dict]:
 
 
 def update_dfb_credentials(user_id: int, dfb_username_encrypted: str, dfb_password_encrypted: str):
-    """Speichert verschluesselte DFB-Credentials fuer User"""
+    """
+    Speichert verschluesselte DFB-Credentials fuer User.
+
+    Args:
+        user_id: User ID
+        dfb_username_encrypted: Verschluesselter DFB Username
+        dfb_password_encrypted: Verschluesseltes DFB Passwort
+    """
     conn = get_connection()
     cursor = conn.cursor()
 
@@ -133,6 +149,33 @@ def update_dfb_credentials(user_id: int, dfb_username_encrypted: str, dfb_passwo
 
     conn.commit()
     conn.close()
+
+
+def get_dfb_credentials(user_id: int) -> Optional[Dict[str, str]]:
+    """
+    Holt verschluesselte DFB-Credentials fuer User.
+
+    Args:
+        user_id: User ID
+
+    Returns:
+        Dict mit dfb_username_encrypted und dfb_password_encrypted oder None
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT dfb_username_encrypted, dfb_password_encrypted 
+        FROM users 
+        WHERE id = ?
+    """, (user_id,))
+
+    result = cursor.fetchone()
+    conn.close()
+
+    if result and result['dfb_username_encrypted'] and result['dfb_password_encrypted']:
+        return dict(result)
+    return None
 
 
 # ===== SESSION FUNKTIONEN =====

@@ -11,7 +11,7 @@ from typing import Dict, List, Optional
 from datetime import datetime
 import multiprocessing
 
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, Depends
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -32,6 +32,14 @@ from db.database import (
     get_session_by_id as db_get_session_by_id
 )
 from api.auth import router as auth_router, get_current_user
+from core.errors import (
+    APIError,
+    NotFoundError,
+    AuthorizationError,
+    CredentialsMissingError,
+    api_error_handler,
+    generic_exception_handler
+)
 
 # Lade .env
 env_path = src_path.parent / ".env"
@@ -43,6 +51,10 @@ logger = setup_logger("api")
 multiprocessing.freeze_support()
 
 app = FastAPI(title="DFB Spesen Generator API")
+
+# Exception Handlers registrieren
+app.add_exception_handler(APIError, api_error_handler)
+app.add_exception_handler(Exception, generic_exception_handler)
 
 # Datenbank beim Start initialisieren
 @app.on_event("startup")
@@ -69,9 +81,8 @@ logger.info(f"API gestartet - Output-Dir: {session_manager.base_output_dir}")
 
 class GenerateRequest(BaseModel):
     """Request Model fuer Spesen-Generierung"""
-    username: Optional[str] = None
-    password: Optional[str] = None
-    use_env_credentials: bool = True
+    # DFB-Credentials werden automatisch aus DB geladen
+    pass
 
 
 class SessionResponse(BaseModel):
@@ -145,17 +156,26 @@ async def generate_spesen(
     """
     Startet die Spesen-Generierung in einer neuen Session.
     Nur fuer eingeloggte User.
+    DFB-Credentials werden automatisch aus User-Profil geladen.
     """
     user_id = current_user['id']
     logger.info(f"User {current_user['email']} startet Generierung")
 
-    # Bei use_env_credentials=true werden die Credentials aus .env verwendet
-    if not request.use_env_credentials:
-        # Temporaer Env-Variablen setzen fuer diese Anfrage
-        if request.username:
-            os.environ["DFB_USERNAME"] = request.username
-        if request.password:
-            os.environ["DFB_PASSWORD"] = request.password
+    # Lade DFB-Credentials aus DB
+    from db.database import get_dfb_credentials
+    from core.encryption import decrypt_credential
+
+    dfb_creds = get_dfb_credentials(user_id)
+
+    if not dfb_creds:
+        raise CredentialsMissingError()
+
+    # Entschluesseln und als Env-Variablen setzen (fuer Scraper)
+    dfb_username = decrypt_credential(dfb_creds['dfb_username_encrypted'])
+    dfb_password = decrypt_credential(dfb_creds['dfb_password_encrypted'])
+
+    os.environ["DFB_USERNAME"] = dfb_username
+    os.environ["DFB_PASSWORD"] = dfb_password
 
     # Neue Session erstellen
     session_path = session_manager.create_session()
@@ -237,16 +257,16 @@ async def get_session_status(
     db_session = db_get_session_by_id(session_id)
 
     if not db_session:
-        raise HTTPException(status_code=404, detail="Session nicht gefunden")
+        raise NotFoundError("Session nicht gefunden")
 
     if db_session['user_id'] != user_id:
-        raise HTTPException(status_code=403, detail="Zugriff verweigert")
+        raise AuthorizationError("Diese Session gehört einem anderen User")
 
     # Hole Dateisystem-Infos
     session_path = session_manager.get_session_by_id(session_id)
 
     if not session_path:
-        raise HTTPException(status_code=404, detail="Session nicht gefunden")
+        raise NotFoundError("Session-Dateien nicht gefunden")
 
     metadata_path = session_path / "metadata.json"
     if metadata_path.exists():
@@ -284,10 +304,10 @@ async def download_all_as_zip(
     db_session = db_get_session_by_id(session_id)
 
     if not db_session:
-        raise HTTPException(status_code=404, detail="Session nicht gefunden")
+        raise NotFoundError("Session nicht gefunden")
 
     if db_session['user_id'] != user_id:
-        raise HTTPException(status_code=403, detail="Zugriff verweigert")
+        raise AuthorizationError("Diese Session gehört einem anderen User")
 
     logger.info("="*80)
     logger.info(f"ZIP-Download START fuer Session: {session_id}")
@@ -383,20 +403,20 @@ async def download_file(
     db_session = db_get_session_by_id(session_id)
 
     if not db_session:
-        raise HTTPException(status_code=404, detail="Session nicht gefunden")
+        raise NotFoundError("Session nicht gefunden")
 
     if db_session['user_id'] != user_id:
-        raise HTTPException(status_code=403, detail="Zugriff verweigert")
+        raise AuthorizationError("Diese Session gehört einem anderen User")
 
     session_path = session_manager.get_session_by_id(session_id)
 
     if not session_path:
-        raise HTTPException(status_code=404, detail="Session nicht gefunden")
+        raise NotFoundError("Session nicht gefunden")
 
     file_path = session_path / filename
 
     if not file_path.exists():
-        raise HTTPException(status_code=404, detail="Datei nicht gefunden")
+        raise NotFoundError("Datei nicht gefunden")
 
     if filename.endswith('.docx'):
         media_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"

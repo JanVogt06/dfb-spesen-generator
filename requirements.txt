@@ -1,18 +1,19 @@
 # Core Dependencies
 fastapi
 uvicorn[standard]
+pydantic[email]
 python-dotenv
 python-multipart
+
+# Security
+pyjwt
+cryptography
+
+# Database
+# (sqlite3 ist in Python included)
 
 # Web Scraping
 playwright
 
 # Document Generation
 python-docx
-
-# authentication
-email-validator
-pyjwt
-
-# Database (standard library, kein pip install nötig)
-# sqlite3
