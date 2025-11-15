@@ -1,16 +1,18 @@
-# DFB Spesen Generator - Dependencies
-
-python-dotenv==1.0.0
+# Core Dependencies
+fastapi
+uvicorn[standard]
+python-dotenv
+python-multipart
 
 # Web Scraping
-playwright==1.48.0
-beautifulsoup4==4.12.3
-lxml==5.3.0
+playwright
 
-# DOCX Generation
-python-docx==1.1.2
+# Document Generation
+python-docx
 
-# FastAPI & Web API
-fastapi==0.115.0
-uvicorn[standard]==0.32.0
-pydantic==2.9.2
+# authentication
+email-validator
+pyjwt
+
+# Database (standard library, kein pip install nötig)
+# sqlite3

@@ -1,10 +1,15 @@
-matches_data.json
-output
+# Environment Variables - NIEMALS committen!
+.env
+.env.local
+.env.production
+.env.*.local
 
 # Python
 __pycache__/
 *.py[cod]
+*$py.class
 *.so
+.Python
 *.egg-info/
 dist/
 build/
@@ -12,20 +17,35 @@ build/
 # Virtual Environment
 venv/
 env/
-.venv/
+ENV/
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
+*~
 
-# Environment Variables
-.env
+# Database
+*.db
+*.sqlite
+*.sqlite3
 
-# Debug Files
-debug_*.png
+# Logs
 *.log
+logs/
+
+# Output/Sessions
+output/
+sessions/
+
+# OS
+.DS_Store
+Thumbs.db
 
 # Playwright
-.playwright/
+playwright/.auth/
+
+# Temporary files
+*.tmp
+.cache/

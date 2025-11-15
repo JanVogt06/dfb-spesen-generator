@@ -11,7 +11,7 @@ from typing import Dict, List, Optional
 from datetime import datetime
 import multiprocessing
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -24,6 +24,14 @@ if str(src_path) not in sys.path:
 from main import scrape_matches_with_session, generate_documents_in_session
 from utils.session_manager import SessionManager
 from utils.logger import setup_logger
+from db.database import (
+    init_database,
+    create_session as db_create_session,
+    update_session_status as db_update_session_status,
+    get_user_sessions,
+    get_session_by_id as db_get_session_by_id
+)
+from api.auth import router as auth_router, get_current_user
 
 # Lade .env
 env_path = src_path.parent / ".env"
@@ -36,6 +44,12 @@ multiprocessing.freeze_support()
 
 app = FastAPI(title="DFB Spesen Generator API")
 
+# Datenbank beim Start initialisieren
+@app.on_event("startup")
+async def startup_event():
+    init_database()
+    logger.info("Datenbank initialisiert")
+
 # CORS Middleware
 app.add_middleware(
     CORSMiddleware,
@@ -45,8 +59,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Session Manager global - KEIN Pfad angeben, er findet automatisch das Projekt-Root!
+# Session Manager global
 session_manager = SessionManager()
+
+app.include_router(auth_router)
 
 logger.info(f"API gestartet - Output-Dir: {session_manager.base_output_dir}")
 
@@ -68,7 +84,7 @@ class SessionResponse(BaseModel):
     progress: Optional[Dict] = None
 
 
-def run_generation_process(session_path: Path):
+def run_generation_process(session_path: Path, session_id: str):
     """
     Fuehrt die Generierung in einem separaten Prozess aus.
     Nutzt die bestehenden Funktionen aus main.py.
@@ -88,6 +104,7 @@ def run_generation_process(session_path: Path):
             status="scraping",
             progress={"current": 0, "total": 0, "step": "Scraping gestartet..."}
         )
+        db_update_session_status(session_id, "scraping")
 
         # Nutze die bestehende Funktion aus main.py
         matches_data, _ = scrape_matches_with_session(session_path)
@@ -99,9 +116,15 @@ def run_generation_process(session_path: Path):
                 status="generating",
                 progress={"current": 0, "total": len(matches_data), "step": "Erstelle Dokumente..."}
             )
+            db_update_session_status(session_id, "generating")
 
             # Nutze die bestehende Funktion aus main.py
             generate_documents_in_session(matches_data, session_path)
+
+            # Update: Completed
+            sm.update_session_metadata(session_path, status="completed")
+            db_update_session_status(session_id, "completed")
+
             process_logger.info(f"Session {session_path.name} erfolgreich abgeschlossen")
         else:
             raise Exception("Keine Spiele gefunden")
@@ -111,13 +134,21 @@ def run_generation_process(session_path: Path):
         # Session Manager neu initialisieren im Prozess
         sm = SessionManager()
         sm.update_session_metadata(session_path, status="failed")
+        db_update_session_status(session_id, "failed")
 
 
 @app.post("/api/generate", response_model=SessionResponse)
-async def generate_spesen(request: GenerateRequest):
+async def generate_spesen(
+    request: GenerateRequest,
+    current_user: dict = Depends(get_current_user)
+):
     """
     Startet die Spesen-Generierung in einer neuen Session.
+    Nur fuer eingeloggte User.
     """
+    user_id = current_user['id']
+    logger.info(f"User {current_user['email']} startet Generierung")
+
     # Bei use_env_credentials=true werden die Credentials aus .env verwendet
     if not request.use_env_credentials:
         # Temporaer Env-Variablen setzen fuer diese Anfrage
@@ -130,10 +161,13 @@ async def generate_spesen(request: GenerateRequest):
     session_path = session_manager.create_session()
     session_id = session_path.name
 
+    # Session in DB speichern mit User-Verknuepfung
+    db_create_session(session_id, user_id)
+
     # Generierung in eigenem Prozess starten (fuer Playwright-Kompatibilitaet)
     process = multiprocessing.Process(
         target=run_generation_process,
-        args=(session_path,),
+        args=(session_path, session_id),
         daemon=True
     )
     process.start()
@@ -148,28 +182,87 @@ async def generate_spesen(request: GenerateRequest):
     )
 
 
+@app.get("/api/sessions", response_model=List[SessionResponse])
+async def get_user_sessions_list(current_user: dict = Depends(get_current_user)):
+    """
+    Gibt alle Sessions des eingeloggten Users zurueck.
+    """
+    user_id = current_user['id']
+
+    # Hole Sessions aus DB
+    db_sessions = get_user_sessions(user_id)
+
+    # Erweitere mit Dateisystem-Infos
+    response_sessions = []
+    for db_session in db_sessions:
+        session_id = db_session['session_id']
+        session_path = session_manager.get_session_by_id(session_id)
+
+        if not session_path:
+            continue
+
+        # Lade Metadata aus Dateisystem
+        metadata_path = session_path / "metadata.json"
+        if metadata_path.exists():
+            with open(metadata_path, 'r', encoding='utf-8') as f:
+                metadata = json.load(f)
+        else:
+            metadata = {}
+
+        files = session_manager.get_session_files(session_path)
+
+        response_sessions.append(SessionResponse(
+            session_id=session_id,
+            status=db_session['status'],
+            files=files,
+            download_all_url=f"/api/download/{session_id}/all",
+            created_at=db_session['created_at'],
+            progress=metadata.get("progress")
+        ))
+
+    return response_sessions
+
+
 @app.get("/api/session/{session_id}", response_model=SessionResponse)
-async def get_session_status(session_id: str):
+async def get_session_status(
+    session_id: str,
+    current_user: dict = Depends(get_current_user)
+):
     """
     Gibt den Status einer Session zurueck.
     """
+    user_id = current_user['id']
+
+    # Pruefe ob Session dem User gehoert
+    db_session = db_get_session_by_id(session_id)
+
+    if not db_session:
+        raise HTTPException(status_code=404, detail="Session nicht gefunden")
+
+    if db_session['user_id'] != user_id:
+        raise HTTPException(status_code=403, detail="Zugriff verweigert")
+
+    # Hole Dateisystem-Infos
     session_path = session_manager.get_session_by_id(session_id)
 
     if not session_path:
         raise HTTPException(status_code=404, detail="Session nicht gefunden")
 
     metadata_path = session_path / "metadata.json"
-    with open(metadata_path, 'r', encoding='utf-8') as f:
-        metadata = json.load(f)
+    if metadata_path.exists():
+        with open(metadata_path, 'r', encoding='utf-8') as f:
+            metadata = json.load(f)
+    else:
+        metadata = {}
 
     files = session_manager.get_session_files(session_path)
 
     return SessionResponse(
         session_id=session_id,
-        status=metadata.get("status", "unknown"),
+        status=db_session['status'],
         files=files,
         download_all_url=f"/api/download/{session_id}/all",
-        created_at=metadata.get("created_at", ""),
+        created_at=db_session['created_at'],
         progress=metadata.get("progress")
     )
 
@@ -177,11 +270,25 @@ async def get_session_status(session_id: str):
 # WICHTIG: ZIP-Download MUSS VOR dem Einzelfile-Download kommen!
 # Sonst matched FastAPI /all als filename
 @app.get("/api/download/{session_id}/all")
-async def download_all_as_zip(session_id: str):
+async def download_all_as_zip(
+    session_id: str,
+    current_user: dict = Depends(get_current_user)
+):
     """
     Download aller Dateien einer Session als ZIP.
     WICHTIG: Dieser Endpoint MUSS vor download_file() stehen!
     """
+    user_id = current_user['id']
+
+    # Pruefe ob Session dem User gehoert
+    db_session = db_get_session_by_id(session_id)
+
+    if not db_session:
+        raise HTTPException(status_code=404, detail="Session nicht gefunden")
+
+    if db_session['user_id'] != user_id:
+        raise HTTPException(status_code=403, detail="Zugriff verweigert")
+
     logger.info("="*80)
     logger.info(f"ZIP-Download START fuer Session: {session_id}")
     logger.info(f"SessionManager base_output_dir: {session_manager.base_output_dir}")
@@ -210,24 +317,20 @@ async def download_all_as_zip(session_id: str):
     if not docx_files:
         logger.error("Keine DOCX-Dateien gefunden!")
 
-        # Pruefe Metadata
-        metadata_path = session_path / "metadata.json"
-        if metadata_path.exists():
-            with open(metadata_path, 'r', encoding='utf-8') as f:
-                metadata = json.load(f)
-                status = metadata.get("status", "unknown")
-                logger.error(f"Session-Status: {status}")
+        # Pruefe Status
+        status = db_session['status']
+        logger.error(f"Session-Status: {status}")
 
-                if status in ["in_progress", "scraping", "generating"]:
-                    raise HTTPException(
-                        status_code=425,
-                        detail=f"Dokumente werden noch erstellt (Status: {status})"
-                    )
-                elif status == "failed":
-                    raise HTTPException(
-                        status_code=500,
-                        detail="Die Dokument-Generierung ist fehlgeschlagen"
-                    )
+        if status in ["pending", "in_progress", "scraping", "generating"]:
+            raise HTTPException(
+                status_code=425,
+                detail=f"Dokumente werden noch erstellt (Status: {status})"
+            )
+        elif status == "failed":
+            raise HTTPException(
+                status_code=500,
+                detail="Die Dokument-Generierung ist fehlgeschlagen"
+            )
 
         raise HTTPException(status_code=404, detail="Keine DOCX-Dateien gefunden")
 
@@ -265,11 +368,26 @@ async def download_all_as_zip(session_id: str):
 
 
 @app.get("/api/download/{session_id}/{filename}")
-async def download_file(session_id: str, filename: str):
+async def download_file(
+    session_id: str,
+    filename: str,
+    current_user: dict = Depends(get_current_user)
+):
     """
     Download einer einzelnen Datei aus einer Session.
     WICHTIG: Dieser Endpoint MUSS nach download_all_as_zip() stehen!
     """
+    user_id = current_user['id']
+
+    # Pruefe ob Session dem User gehoert
+    db_session = db_get_session_by_id(session_id)
+
+    if not db_session:
+        raise HTTPException(status_code=404, detail="Session nicht gefunden")
+
+    if db_session['user_id'] != user_id:
+        raise HTTPException(status_code=403, detail="Zugriff verweigert")
+
     session_path = session_manager.get_session_by_id(session_id)
 
     if not session_path:
