@@ -11,7 +11,7 @@ export function LoginForm() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  
+
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -30,17 +30,17 @@ export function LoginForm() {
   };
 
   return (
-    <Card className="w-full max-w-md">
-      <CardHeader>
-        <CardTitle>Anmelden</CardTitle>
-        <CardDescription>
+    <Card className="w-full max-w-md mx-4 sm:mx-0">
+      <CardHeader className="px-4 sm:px-6">
+        <CardTitle className="text-xl sm:text-2xl">Anmelden</CardTitle>
+        <CardDescription className="text-sm">
           Melde dich mit deinem TFV Spesen Generator Account an
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="px-4 sm:px-6">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="email">E-Mail</Label>
+            <Label htmlFor="email" className="text-sm sm:text-base">E-Mail</Label>
             <Input
               id="email"
               type="email"
@@ -48,11 +48,12 @@ export function LoginForm() {
               onChange={(e) => setEmail(e.target.value)}
               required
               placeholder="deine@email.de"
+              className="text-sm sm:text-base"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="password">Passwort</Label>
+            <Label htmlFor="password" className="text-sm sm:text-base">Passwort</Label>
             <Input
               id="password"
               type="password"
@@ -60,22 +61,23 @@ export function LoginForm() {
               onChange={(e) => setPassword(e.target.value)}
               required
               placeholder="••••••••"
+              className="text-sm sm:text-base"
             />
           </div>
 
           {error && (
-            <div className="text-sm text-red-500">
+            <div className="text-sm text-red-500 break-words">
               {error}
             </div>
           )}
 
-          <Button type="submit" className="w-full" disabled={isLoading}>
+          <Button type="submit" className="w-full text-sm sm:text-base" disabled={isLoading}>
             {isLoading ? 'Anmelden...' : 'Anmelden'}
           </Button>
         </form>
       </CardContent>
-      <CardFooter className="flex justify-center">
-        <p className="text-sm text-gray-600">
+      <CardFooter className="flex justify-center px-4 sm:px-6">
+        <p className="text-sm text-gray-600 text-center">
           Noch kein Account?{' '}
           <Link to="/register" className="text-blue-600 hover:underline">
             Jetzt registrieren

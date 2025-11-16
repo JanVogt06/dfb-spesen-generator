@@ -42,17 +42,17 @@ export function RegisterForm() {
   };
 
   return (
-    <Card className="w-full max-w-md">
-      <CardHeader>
-        <CardTitle>Registrieren</CardTitle>
-        <CardDescription>
+    <Card className="w-full max-w-md mx-4 sm:mx-0">
+      <CardHeader className="px-4 sm:px-6">
+        <CardTitle className="text-xl sm:text-2xl">Registrieren</CardTitle>
+        <CardDescription className="text-sm">
           Erstelle einen neuen TFV Spesen Generator Account
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="px-4 sm:px-6">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="email">E-Mail</Label>
+            <Label htmlFor="email" className="text-sm sm:text-base">E-Mail</Label>
             <Input
               id="email"
               type="email"
@@ -60,11 +60,12 @@ export function RegisterForm() {
               onChange={(e) => setEmail(e.target.value)}
               required
               placeholder="deine@email.de"
+              className="text-sm sm:text-base"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="password">Passwort</Label>
+            <Label htmlFor="password" className="text-sm sm:text-base">Passwort</Label>
             <Input
               id="password"
               type="password"
@@ -72,11 +73,12 @@ export function RegisterForm() {
               onChange={(e) => setPassword(e.target.value)}
               required
               placeholder="Mindestens 8 Zeichen"
+              className="text-sm sm:text-base"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="confirmPassword">Passwort bestätigen</Label>
+            <Label htmlFor="confirmPassword" className="text-sm sm:text-base">Passwort bestätigen</Label>
             <Input
               id="confirmPassword"
               type="password"
@@ -84,22 +86,23 @@ export function RegisterForm() {
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
               placeholder="Passwort wiederholen"
+              className="text-sm sm:text-base"
             />
           </div>
 
           {error && (
-            <div className="text-sm text-red-500">
+            <div className="text-sm text-red-500 break-words">
               {error}
             </div>
           )}
 
-          <Button type="submit" className="w-full" disabled={isLoading}>
+          <Button type="submit" className="w-full text-sm sm:text-base" disabled={isLoading}>
             {isLoading ? 'Registrieren...' : 'Registrieren'}
           </Button>
         </form>
       </CardContent>
-      <CardFooter className="flex justify-center">
-        <p className="text-sm text-gray-600">
+      <CardFooter className="flex justify-center px-4 sm:px-6">
+        <p className="text-sm text-gray-600 text-center">
           Bereits ein Account?{' '}
           <Link to="/login" className="text-blue-600 hover:underline">
             Zum Login

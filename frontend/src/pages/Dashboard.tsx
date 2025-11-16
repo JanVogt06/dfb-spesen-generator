@@ -1,11 +1,10 @@
-import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { logout } from '@/lib/auth';
-import type { Session } from '@/lib/sessions';
-import { getUserSessions, startGeneration } from '@/lib/sessions';
+import { Button } from '@/components/ui/button';
 import { SessionList } from '@/components/sessions/SessionList';
-import { Zap, Settings, LogOut, AlertCircle } from 'lucide-react';
+import { getUserSessions, startGeneration, type Session } from '@/lib/sessions';
+import { logout } from '@/lib/auth';
+import { Settings, LogOut, Zap, AlertCircle } from 'lucide-react';
 
 export function DashboardPage() {
   const navigate = useNavigate();
@@ -14,16 +13,15 @@ export function DashboardPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState('');
 
-  // Sessions beim Laden holen
   useEffect(() => {
     loadSessions();
   }, []);
 
   const loadSessions = async () => {
+    setIsLoading(true);
     try {
       const data = await getUserSessions();
       setSessions(data);
-      setError('');
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -52,18 +50,18 @@ export function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      <div className="max-w-7xl mx-auto p-8">
+      <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
         {/* Header mit Gradient */}
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-2xl shadow-lg mb-8 p-8 text-white">
-          <div className="flex justify-between items-center">
+        <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl sm:rounded-2xl shadow-lg mb-6 sm:mb-8 p-4 sm:p-6 lg:p-8 text-white">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
             <div>
-              <h1 className="text-3xl font-bold">TFV Spesen Generator</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold">TFV Spesen Generator</h1>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <Button
                 onClick={() => navigate('/settings')}
                 variant="outline"
-                className="bg-white/10 border-white/20 text-white hover:bg-white/20 backdrop-blur-sm"
+                className="bg-white/10 border-white/20 text-white hover:bg-white/20 backdrop-blur-sm w-full sm:w-auto"
               >
                 <Settings className="mr-2 h-4 w-4" />
                 Einstellungen
@@ -71,7 +69,7 @@ export function DashboardPage() {
               <Button
                 onClick={logout}
                 variant="outline"
-                className="bg-white/10 border-white/20 text-white hover:bg-white/20 backdrop-blur-sm"
+                className="bg-white/10 border-white/20 text-white hover:bg-white/20 backdrop-blur-sm w-full sm:w-auto"
               >
                 <LogOut className="mr-2 h-4 w-4" />
                 Abmelden
@@ -81,22 +79,22 @@ export function DashboardPage() {
         </div>
 
         {/* Generierungs-Button */}
-        <div className="mb-8">
+        <div className="mb-6 sm:mb-8">
           <Button
             onClick={handleStartGeneration}
             disabled={isGenerating}
             size="lg"
-            className="w-full md:w-auto bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg hover:shadow-xl"
+            className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg hover:shadow-xl"
           >
             <Zap className="mr-2 h-5 w-5" />
             {isGenerating ? 'Starte Generierung...' : 'Neue Spesen generieren'}
           </Button>
 
           {error && (
-            <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg shadow-sm animate-in slide-in-from-top-2 duration-300">
-              <div className="flex items-center gap-2">
-                <AlertCircle className="h-5 w-5 text-red-600" />
-                <p className="text-sm text-red-800">{error}</p>
+            <div className="mt-4 p-3 sm:p-4 bg-red-50 border border-red-200 rounded-lg shadow-sm animate-in slide-in-from-top-2 duration-300">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-red-800 break-words">{error}</p>
               </div>
             </div>
           )}
@@ -104,7 +102,7 @@ export function DashboardPage() {
 
         {/* Sessions-Liste */}
         <div>
-          <h2 className="text-2xl font-semibold mb-4 text-gray-800">Deine Sessions</h2>
+          <h2 className="text-xl sm:text-2xl font-semibold mb-4 text-gray-800">Deine Sessions</h2>
 
           {isLoading ? (
             <div className="text-center py-12">

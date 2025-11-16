@@ -1,44 +1,46 @@
 import { useState } from 'react';
+import type { MatchData } from '@/lib/matches';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import type { MatchData } from '@/lib/sessions';
-import { ChevronDown, ChevronUp, Download, Calendar, Trophy, Users, MapPin } from 'lucide-react';
+import { Calendar, ChevronDown, ChevronUp, Download, Users, MapPin } from 'lucide-react';
 
 interface MatchCardProps {
   match: MatchData;
   index: number;
-  onDownload: (filename: string) => void;
   filename: string;
+  onDownload: (filename: string) => void;
   isDownloading: boolean;
 }
 
-export function MatchCard({ match, index, onDownload, filename, isDownloading }: MatchCardProps) {
+export function MatchCard({ match, index, filename, onDownload, isDownloading }: MatchCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
   const getMatchTitle = () => {
-    const spiel = match.spiel_info || {};
-    if (spiel.heim_team && spiel.gast_team) {
-      return `${spiel.heim_team} vs ${spiel.gast_team}`;
+    if (match.spiel_info?.heim_team && match.spiel_info?.gast_team) {
+      return `${match.spiel_info.heim_team} - ${match.spiel_info.gast_team}`;
     }
     return `Spiel ${index + 1}`;
   };
 
   const getMatchSubtitle = () => {
-    const spiel = match.spiel_info || {};
-    const parts = [];
-
-    if (spiel.anpfiff) parts.push(spiel.anpfiff);
-    if (spiel.spielklasse) parts.push(spiel.spielklasse);
-    if (spiel.mannschaftsart) parts.push(spiel.mannschaftsart);
-
-    return parts.length > 0 ? parts.join(' • ') : 'Keine Details verfügbar';
+    if (match.spiel_info?.anpfiff) {
+      const date = new Date(match.spiel_info.anpfiff);
+      return date.toLocaleString('de-DE', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      }) + ' Uhr';
+    }
+    return 'Keine Zeitangabe';
   };
 
   const formatFieldName = (key: string): string => {
     const fieldNames: Record<string, string> = {
       anpfiff: 'Anpfiff',
-      heim_team: 'Heimmannschaft',
-      gast_team: 'Gastmannschaft',
+      heim_team: 'Heim',
+      gast_team: 'Gast',
       mannschaftsart: 'Mannschaftsart',
       spielklasse: 'Spielklasse',
       staffel: 'Staffel',
@@ -52,27 +54,37 @@ export function MatchCard({ match, index, onDownload, filename, isDownloading }:
       adresse: 'Adresse',
       platz_typ: 'Platztyp',
     };
-    return fieldNames[key] || key.charAt(0).toUpperCase() + key.slice(1);
+    return fieldNames[key] || key;
   };
 
   const renderSpielInfo = () => {
-    const spiel = match.spiel_info;
-    if (!spiel) return null;
+    if (!match.spiel_info || Object.keys(match.spiel_info).length === 0) {
+      return null;
+    }
 
-    const entries = Object.entries(spiel).filter(([_, value]) => value);
-    if (entries.length === 0) return null;
+    const fieldsToShow = Object.entries(match.spiel_info)
+      .filter(([key, value]) =>
+        value &&
+        key !== 'heim_team' &&
+        key !== 'gast_team' &&
+        key !== 'anpfiff'
+      );
+
+    if (fieldsToShow.length === 0) {
+      return null;
+    }
 
     return (
-      <div className="space-y-2">
-        <h4 className="font-semibold text-sm text-gray-700 flex items-center gap-1.5">
-          <Trophy className="h-4 w-4 text-blue-600" />
-          Spieldaten
+      <div className="border-t pt-4">
+        <h4 className="font-medium text-gray-700 mb-2 flex items-center gap-1.5 text-sm sm:text-base">
+          <Calendar className="h-4 w-4" />
+          Spielinformationen
         </h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-          {entries.map(([key, value]) => (
-            <div key={key} className="text-sm">
-              <span className="text-gray-600">{formatFieldName(key)}:</span>{' '}
-              <span className="text-gray-900">{value}</span>
+        <div className="grid gap-2 text-xs sm:text-sm">
+          {fieldsToShow.map(([key, value]) => (
+            <div key={key} className="grid grid-cols-[100px_1fr] sm:grid-cols-[120px_1fr] gap-2">
+              <span className="text-gray-600 break-words">{formatFieldName(key)}:</span>
+              <span className="text-gray-900 break-words">{value}</span>
             </div>
           ))}
         </div>
@@ -81,59 +93,58 @@ export function MatchCard({ match, index, onDownload, filename, isDownloading }:
   };
 
   const renderSchiedsrichter = () => {
-    const schiris = match.schiedsrichter;
-    if (!schiris || schiris.length === 0) return null;
+    if (!match.schiedsrichter || match.schiedsrichter.length === 0) {
+      return null;
+    }
 
     return (
-      <div className="space-y-2">
-        <h4 className="font-semibold text-sm text-gray-700 flex items-center gap-1.5">
-          <Users className="h-4 w-4 text-blue-600" />
+      <div className="border-t pt-4">
+        <h4 className="font-medium text-gray-700 mb-2 flex items-center gap-1.5 text-sm sm:text-base">
+          <Users className="h-4 w-4" />
           Schiedsrichter
         </h4>
-        {schiris.map((schiri, idx) => {
-          const entries = Object.entries(schiri).filter(([_, value]) => value);
-          if (entries.length === 0) return null;
-
-          return (
-            <div key={idx} className="border-l-2 border-blue-200 pl-3 space-y-1 hover:border-blue-400 transition-colors">
-              {schiri.rolle && (
-                <div className="font-medium text-sm text-gray-800">{schiri.rolle}</div>
-              )}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                {entries
-                  .filter(([key]) => key !== 'rolle')
+        <div className="space-y-3">
+          {match.schiedsrichter.map((sr, idx) => (
+            <div key={idx} className="bg-gray-50 p-3 rounded-lg">
+              <div className="grid gap-2 text-xs sm:text-sm">
+                {Object.entries(sr)
+                  .filter(([_, value]) => value)
                   .map(([key, value]) => (
-                    <div key={key} className="text-sm">
-                      <span className="text-gray-600">{formatFieldName(key)}:</span>{' '}
-                      <span className="text-gray-900">{value}</span>
+                    <div key={key} className="grid grid-cols-[100px_1fr] sm:grid-cols-[120px_1fr] gap-2">
+                      <span className="text-gray-600 break-words">{formatFieldName(key)}:</span>
+                      <span className="text-gray-900 break-words">{value}</span>
                     </div>
                   ))}
               </div>
             </div>
-          );
-        })}
+          ))}
+        </div>
       </div>
     );
   };
 
   const renderSpielstaette = () => {
-    const staette = match.spielstaette;
-    if (!staette) return null;
+    if (!match.spielstaette || Object.keys(match.spielstaette).length === 0) {
+      return null;
+    }
 
-    const entries = Object.entries(staette).filter(([_, value]) => value);
-    if (entries.length === 0) return null;
+    const fieldsToShow = Object.entries(match.spielstaette).filter(([_, value]) => value);
+
+    if (fieldsToShow.length === 0) {
+      return null;
+    }
 
     return (
-      <div className="space-y-2">
-        <h4 className="font-semibold text-sm text-gray-700 flex items-center gap-1.5">
-          <MapPin className="h-4 w-4 text-blue-600" />
+      <div className="border-t pt-4">
+        <h4 className="font-medium text-gray-700 mb-2 flex items-center gap-1.5 text-sm sm:text-base">
+          <MapPin className="h-4 w-4" />
           Spielstätte
         </h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-          {entries.map(([key, value]) => (
-            <div key={key} className="text-sm">
-              <span className="text-gray-600">{formatFieldName(key)}:</span>{' '}
-              <span className="text-gray-900">{value}</span>
+        <div className="grid gap-2 text-xs sm:text-sm">
+          {fieldsToShow.map(([key, value]) => (
+            <div key={key} className="grid grid-cols-[100px_1fr] sm:grid-cols-[120px_1fr] gap-2">
+              <span className="text-gray-600 break-words">{formatFieldName(key)}:</span>
+              <span className="text-gray-900 break-words">{value}</span>
             </div>
           ))}
         </div>
@@ -144,29 +155,30 @@ export function MatchCard({ match, index, onDownload, filename, isDownloading }:
   return (
     <Card className="hover:shadow-lg transition-all duration-200 border-gray-200 hover:border-blue-300">
       <CardHeader>
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <CardTitle className="text-base">{getMatchTitle()}</CardTitle>
-            <p className="text-sm text-gray-600 mt-1 flex items-center gap-1.5">
-              <Calendar className="h-3.5 w-3.5" />
-              {getMatchSubtitle()}
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <CardTitle className="text-sm sm:text-base break-words">{getMatchTitle()}</CardTitle>
+            <p className="text-xs sm:text-sm text-gray-600 mt-1 flex items-center gap-1.5">
+              <Calendar className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />
+              <span className="break-words">{getMatchSubtitle()}</span>
             </p>
           </div>
-          <div className="flex gap-2 ml-4">
+          <div className="flex gap-2 self-start sm:ml-4">
             <Button
               size="sm"
               variant="outline"
               onClick={() => setIsExpanded(!isExpanded)}
+              className="flex-1 sm:flex-none"
             >
               {isExpanded ? (
                 <>
                   <ChevronUp className="mr-1 h-4 w-4" />
-                  Weniger
+                  <span className="hidden sm:inline">Weniger</span>
                 </>
               ) : (
                 <>
                   <ChevronDown className="mr-1 h-4 w-4" />
-                  Details
+                  <span className="hidden sm:inline">Details</span>
                 </>
               )}
             </Button>
@@ -174,7 +186,7 @@ export function MatchCard({ match, index, onDownload, filename, isDownloading }:
               size="sm"
               onClick={() => onDownload(filename)}
               disabled={isDownloading}
-              className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
+              className="flex-1 sm:flex-none bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
             >
               <Download className="mr-1 h-4 w-4" />
               {isDownloading ? 'Lädt...' : 'DOCX'}

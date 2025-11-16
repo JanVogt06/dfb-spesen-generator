@@ -157,8 +157,8 @@ export function SessionDetailPage() {
     const Icon = badge.icon;
 
     return (
-      <span className={`px-3 py-1.5 rounded-full text-xs font-medium ${badge.className} flex items-center gap-1.5`}>
-        <Icon className="h-3.5 w-3.5" />
+      <span className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs font-medium ${badge.className} flex items-center gap-1.5 whitespace-nowrap`}>
+        <Icon className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />
         {badge.text}
       </span>
     );
@@ -166,7 +166,7 @@ export function SessionDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-8">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 sm:p-6 lg:p-8">
         <div className="max-w-7xl mx-auto">
           <div className="text-center py-12">
             <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -179,9 +179,9 @@ export function SessionDetailPage() {
 
   if (error || !currentSession) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-8">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 sm:p-6 lg:p-8">
         <div className="max-w-7xl mx-auto">
-          <div className="mb-8">
+          <div className="mb-6 sm:mb-8">
             <Button
               onClick={() => navigate('/dashboard')}
               variant="outline"
@@ -190,10 +190,10 @@ export function SessionDetailPage() {
               Zurück zum Dashboard
             </Button>
           </div>
-          <div className="p-6 bg-red-50 border border-red-200 rounded-lg shadow-sm">
-            <div className="flex items-center gap-2">
-              <XCircle className="h-5 w-5 text-red-600" />
-              <p className="text-sm text-red-800">
+          <div className="p-4 sm:p-6 bg-red-50 border border-red-200 rounded-lg shadow-sm">
+            <div className="flex items-start gap-2">
+              <XCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-red-800 break-words">
                 {error || 'Session nicht gefunden'}
               </p>
             </div>
@@ -205,9 +205,9 @@ export function SessionDetailPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      <div className="max-w-7xl mx-auto p-8">
+      <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-6 sm:mb-8">
           <Button
             onClick={() => navigate('/dashboard')}
             variant="outline"
@@ -217,26 +217,28 @@ export function SessionDetailPage() {
             Zurück zum Dashboard
           </Button>
 
-          <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
-            <div className="flex justify-between items-start">
-              <div>
-                <h1 className="text-3xl font-bold mb-2 text-gray-800">
+          <div className="bg-white rounded-xl shadow-md p-4 sm:p-6 border border-gray-200">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
+              <div className="flex-1 min-w-0">
+                <h1 className="text-2xl sm:text-3xl font-bold mb-2 text-gray-800 break-words">
                   {formatSessionTitle(currentSession.created_at)}
                 </h1>
-                <p className="text-gray-600 text-sm">
+                <p className="text-gray-600 text-xs sm:text-sm break-all">
                   Session-ID: {currentSession.session_id}
                 </p>
               </div>
-              {getStatusBadge(currentSession.status)}
+              <div className="self-start">
+                {getStatusBadge(currentSession.status)}
+              </div>
             </div>
           </div>
         </div>
 
         {/* Progress für laufende Sessions */}
         {isRunning && (
-          <Card className="mb-8 border-blue-200 shadow-md">
+          <Card className="mb-6 sm:mb-8 border-blue-200 shadow-md">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
                 <PlayCircle className="h-5 w-5 text-blue-600" />
                 Fortschritt
               </CardTitle>
@@ -249,9 +251,9 @@ export function SessionDetailPage() {
 
         {/* Fehler */}
         {currentSession.status === 'failed' && (
-          <div className="mb-8 p-4 bg-red-50 border border-red-200 rounded-lg shadow-sm">
-            <div className="flex items-center gap-2">
-              <XCircle className="h-5 w-5 text-red-600" />
+          <div className="mb-6 sm:mb-8 p-3 sm:p-4 bg-red-50 border border-red-200 rounded-lg shadow-sm">
+            <div className="flex items-start gap-2">
+              <XCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
               <p className="text-sm text-red-800">
                 Bei der Generierung ist ein Fehler aufgetreten.
               </p>
@@ -269,9 +271,9 @@ export function SessionDetailPage() {
               </div>
             ) : matches.length > 0 ? (
               <div>
-                <h2 className="text-2xl font-semibold mb-4 text-gray-800 flex items-center gap-2">
-                  <FileText className="h-6 w-6 text-blue-600" />
-                  Spiele ({matches.length})
+                <h2 className="text-xl sm:text-2xl font-semibold mb-4 text-gray-800 flex items-center gap-2">
+                  <FileText className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600 flex-shrink-0" />
+                  <span>Spiele ({matches.length})</span>
                 </h2>
                 <div className="space-y-3">
                   {matches.map((match, index) => {

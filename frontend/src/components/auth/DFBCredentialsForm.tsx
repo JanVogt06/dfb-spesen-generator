@@ -50,14 +50,14 @@ export function DFBCredentialsForm() {
   };
 
   return (
-    <Card className="w-full max-w-md">
-      <CardHeader>
-        <CardTitle>TFV-Zugangsdaten</CardTitle>
-        <CardDescription>
+    <Card className="w-full max-w-md mx-4 sm:mx-0">
+      <CardHeader className="px-4 sm:px-6">
+        <CardTitle className="text-xl sm:text-2xl">TFV-Zugangsdaten</CardTitle>
+        <CardDescription className="text-sm">
           Speichere deine TFVnet-Zugangsdaten für die automatische Generierung
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="px-4 sm:px-6">
         {hasCredentials && (
           <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-md">
             <p className="text-sm text-green-800">
@@ -68,7 +68,7 @@ export function DFBCredentialsForm() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="dfbUsername">TFV-Benutzername</Label>
+            <Label htmlFor="dfbUsername" className="text-sm sm:text-base">TFV-Benutzername</Label>
             <Input
               id="dfbUsername"
               type="text"
@@ -76,11 +76,12 @@ export function DFBCredentialsForm() {
               onChange={(e) => setDfbUsername(e.target.value)}
               required
               placeholder="Dein TFVnet-Benutzername"
+              className="text-sm sm:text-base"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="dfbPassword">TFV-Passwort</Label>
+            <Label htmlFor="dfbPassword" className="text-sm sm:text-base">TFV-Passwort</Label>
             <Input
               id="dfbPassword"
               type="password"
@@ -88,26 +89,27 @@ export function DFBCredentialsForm() {
               onChange={(e) => setDfbPassword(e.target.value)}
               required
               placeholder="••••••••"
+              className="text-sm sm:text-base"
             />
           </div>
 
           {error && (
-            <div className="text-sm text-red-500">
+            <div className="text-sm text-red-500 break-words">
               {error}
             </div>
           )}
 
           {success && (
-            <div className="text-sm text-green-600">
+            <div className="text-sm text-green-600 break-words">
               {success}
             </div>
           )}
 
-          <Button type="submit" className="w-full" disabled={isLoading}>
+          <Button type="submit" className="w-full text-sm sm:text-base" disabled={isLoading}>
             {isLoading ? 'Speichern...' : hasCredentials ? 'Aktualisieren' : 'Speichern'}
           </Button>
 
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-gray-500 break-words">
             Deine Zugangsdaten werden verschlüsselt gespeichert.
           </p>
         </form>

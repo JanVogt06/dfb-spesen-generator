@@ -103,9 +103,9 @@ export function SessionCard({ initialSession }: SessionCardProps) {
     const Icon = badge.icon;
 
     return (
-      <span className={`px-3 py-1.5 rounded-full text-xs font-medium ${badge.className} flex items-center gap-1.5`}>
-        <Icon className="h-3.5 w-3.5" />
-        {badge.text}
+      <span className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs font-medium ${badge.className} flex items-center gap-1.5 whitespace-nowrap`}>
+        <Icon className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />
+        <span className="hidden sm:inline">{badge.text}</span>
       </span>
     );
   };
@@ -129,16 +129,18 @@ export function SessionCard({ initialSession }: SessionCardProps) {
   return (
     <Card className="hover:shadow-lg transition-all duration-200 border-gray-200 hover:border-blue-300">
       <CardHeader>
-        <div className="flex justify-between items-start">
-          <div>
-            <CardTitle className="text-lg">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
+          <div className="flex-1 min-w-0">
+            <CardTitle className="text-base sm:text-lg break-words">
               {formatSessionTitle(currentSession.created_at)}
             </CardTitle>
-            <CardDescription className="text-xs mt-1">
+            <CardDescription className="text-xs mt-1 break-all">
               Session-ID: {currentSession.session_id}
             </CardDescription>
           </div>
-          {getStatusBadge(currentSession.status)}
+          <div className="self-start">
+            {getStatusBadge(currentSession.status)}
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -149,12 +151,12 @@ export function SessionCard({ initialSession }: SessionCardProps) {
         {currentSession.status === 'completed' && (
           <div className="space-y-2">
             <p className="text-sm text-gray-600 flex items-center gap-1.5">
-              <FileText className="h-4 w-4" />
-              {getDocxCount()} Spesenabrechnungen generiert
+              <FileText className="h-4 w-4 flex-shrink-0" />
+              <span>{getDocxCount()} Spesenabrechnungen generiert</span>
             </p>
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <Button
-                className="flex-1"
+                className="flex-1 w-full sm:w-auto"
                 onClick={() => navigate(`/session/${currentSession.session_id}`)}
                 variant="outline"
               >
@@ -162,7 +164,7 @@ export function SessionCard({ initialSession }: SessionCardProps) {
                 Details anzeigen
               </Button>
               <Button
-                className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
+                className="flex-1 w-full sm:w-auto bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
                 onClick={handleDownload}
                 disabled={isDownloading}
               >
@@ -175,9 +177,9 @@ export function SessionCard({ initialSession }: SessionCardProps) {
 
         {/* Fehler */}
         {currentSession.status === 'failed' && (
-          <div className="text-sm text-red-600 flex items-center gap-2 p-3 bg-red-50 rounded-lg border border-red-200">
-            <XCircle className="h-4 w-4" />
-            Bei der Generierung ist ein Fehler aufgetreten.
+          <div className="text-sm text-red-600 flex items-start gap-2 p-3 bg-red-50 rounded-lg border border-red-200">
+            <XCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+            <span>Bei der Generierung ist ein Fehler aufgetreten.</span>
           </div>
         )}
       </CardContent>
