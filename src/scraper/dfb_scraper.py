@@ -14,7 +14,7 @@ logger = setup_logger("dfb_scraper")
 class DFBScraper:
     """Scraper für DFB.net Ansetzungen"""
 
-    def __init__(self, headless: bool = False, username: str = None, password: str = None):
+    def __init__(self, headless: bool = True, username: str = None, password: str = None):
         """
         Initialisiert den Scraper.
 

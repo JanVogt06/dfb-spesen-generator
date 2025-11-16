@@ -11,7 +11,7 @@ from typing import Dict, List, Optional
 from datetime import datetime
 import multiprocessing
 
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -285,6 +285,47 @@ async def get_session_status(
         created_at=db_session['created_at'],
         progress=metadata.get("progress")
     )
+
+
+@app.get("/api/session/{session_id}/matches")
+async def get_session_matches(
+    session_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Gibt die kompletten Match-Daten einer Session zurueck.
+    """
+    user_id = current_user['id']
+
+    # Pruefe ob Session dem User gehoert
+    db_session = db_get_session_by_id(session_id)
+
+    if not db_session:
+        raise NotFoundError("Session nicht gefunden")
+
+    if db_session['user_id'] != user_id:
+        raise AuthorizationError("Diese Session gehört einem anderen User")
+
+    # Hole Session-Pfad
+    session_path = session_manager.get_session_by_id(session_id)
+
+    if not session_path:
+        raise NotFoundError("Session nicht gefunden")
+
+    # Lade spesen_data.json
+    data_file = session_path / "spesen_data.json"
+
+    if not data_file.exists():
+        # Wenn noch keine Daten vorhanden, gebe leere Liste zurueck
+        return []
+
+    try:
+        with open(data_file, 'r', encoding='utf-8') as f:
+            matches_data = json.load(f)
+        return matches_data
+    except Exception as e:
+        logger.error(f"Fehler beim Laden der Match-Daten: {e}")
+        raise APIError(f"Fehler beim Laden der Match-Daten: {str(e)}")
 
 
 # WICHTIG: ZIP-Download MUSS VOR dem Einzelfile-Download kommen!

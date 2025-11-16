@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import type { Session } from '@/lib/sessions';
 import { getDownloadAllUrl } from '@/lib/sessions';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,6 +13,7 @@ interface SessionCardProps {
 }
 
 export function SessionCard({ initialSession }: SessionCardProps) {
+  const navigate = useNavigate();
   const [isDownloading, setIsDownloading] = useState(false);
 
   // Polling nur für laufende Sessions
@@ -72,18 +74,7 @@ export function SessionCard({ initialSession }: SessionCardProps) {
     );
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleString('de-DE', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
-  const formatSessionTitle = (sessionId: string, createdAt: string) => {
+  const formatSessionTitle = (createdAt: string) => {
     const date = new Date(createdAt);
     return `Generierung vom ${date.toLocaleDateString('de-DE', {
       day: '2-digit',
@@ -105,7 +96,7 @@ export function SessionCard({ initialSession }: SessionCardProps) {
         <div className="flex justify-between items-start">
           <div>
             <CardTitle className="text-lg">
-              {formatSessionTitle(currentSession.session_id, currentSession.created_at)}
+              {formatSessionTitle(currentSession.created_at)}
             </CardTitle>
             <CardDescription>
               Session-ID: {currentSession.session_id}
@@ -124,13 +115,22 @@ export function SessionCard({ initialSession }: SessionCardProps) {
             <p className="text-sm text-gray-600">
               {getDocxCount()} Spesenabrechnungen generiert
             </p>
-            <Button
-              className="w-full"
-              onClick={handleDownload}
-              disabled={isDownloading}
-            >
-              {isDownloading ? 'Lädt herunter...' : 'Alle herunterladen (ZIP)'}
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                className="flex-1"
+                onClick={() => navigate(`/session/${currentSession.session_id}`)}
+                variant="outline"
+              >
+                Details anzeigen
+              </Button>
+              <Button
+                className="flex-1"
+                onClick={handleDownload}
+                disabled={isDownloading}
+              >
+                {isDownloading ? 'Lädt herunter...' : 'Alle (ZIP)'}
+              </Button>
+            </div>
           </div>
         )}
 

@@ -1,13 +1,9 @@
 """
 DFB Spesen Generator - Main Entry Point
-Startet automatisch Web-API und Frontend
+Startet die FastAPI Backend-Anwendung
 """
-import time
 import os
 import json
-import sys
-import webbrowser
-import threading
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -52,7 +48,7 @@ def scrape_matches_with_session(session_path: Path = None):
         return None, None
 
     try:
-        with DFBScraper(headless=False, username=username, password=password) as scraper:
+        with DFBScraper(headless=True, username=username, password=password) as scraper:
             # Navigation und Login
             session_mgr.update_session_metadata(
                 session_path,
@@ -162,49 +158,18 @@ def generate_documents_in_session(matches_data, session_path: Path):
     return generated_files
 
 
-def open_browser():
-    """Öffnet den Browser nach kurzer Verzögerung"""
-    time.sleep(2)  # Warte bis Server gestartet ist
-    webbrowser.open('http://localhost:8080')
-    logger.info("Browser geöffnet: http://localhost:8080")
-
-
-def serve_frontend():
-    """Startet einen einfachen HTTP-Server für das Frontend"""
-    import http.server
-    import socketserver
-
-    frontend_dir = Path(__file__).parent.parent / "frontend"
-    os.chdir(frontend_dir)
-
-    PORT = 8080
-    Handler = http.server.SimpleHTTPRequestHandler
-
-    with socketserver.TCPServer(("", PORT), Handler) as httpd:
-        logger.info(f"Frontend-Server läuft auf http://localhost:{PORT}")
-        httpd.serve_forever()
-
-
 def main():
     """
-    Startet die FastAPI Anwendung und das Frontend.
-    Dies ist jetzt der Standard-Modus.
+    Startet die FastAPI Backend-Anwendung.
+    Das Frontend läuft separat mit Vite Dev-Server.
     """
     import uvicorn
 
-    # Starte Frontend-Server in separatem Thread
-    frontend_thread = threading.Thread(target=serve_frontend, daemon=True)
-    frontend_thread.start()
-
-    # Öffne Browser in separatem Thread
-    browser_thread = threading.Thread(target=open_browser, daemon=True)
-    browser_thread.start()
-
-    logger.info("Starte DFB Spesen Generator...")
+    logger.info("Starte DFB Spesen Generator API...")
     logger.info("==============================================")
     logger.info("API läuft auf: http://localhost:8000")
-    logger.info("Frontend läuft auf: http://localhost:8080")
     logger.info("==============================================")
+    logger.info("Frontend separat starten mit: npm run dev")
 
     # Starte API
     uvicorn.run(

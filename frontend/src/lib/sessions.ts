@@ -1,4 +1,5 @@
 import { api } from './api';
+import type { MatchData } from './matches';
 
 // Types
 export interface SessionFile {
@@ -23,6 +24,9 @@ export interface Session {
   progress?: SessionProgress;
 }
 
+// Re-export MatchData for convenience
+export type { MatchData } from './matches';
+
 // API Functions
 export async function startGeneration(): Promise<Session> {
   const response = await api.post<Session>('/api/generate', {});
@@ -36,6 +40,11 @@ export async function getUserSessions(): Promise<Session[]> {
 
 export async function getSession(sessionId: string): Promise<Session> {
   const response = await api.get<Session>(`/api/session/${sessionId}`);
+  return response.data;
+}
+
+export async function getSessionMatches(sessionId: string): Promise<MatchData[]> {
+  const response = await api.get<MatchData[]>(`/api/session/${sessionId}/matches`);
   return response.data;
 }
 
