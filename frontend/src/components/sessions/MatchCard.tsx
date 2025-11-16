@@ -80,13 +80,15 @@ export function MatchCard({ match, index, filename, onDownload, isDownloading }:
           <Calendar className="h-4 w-4" />
           Spielinformationen
         </h4>
-        <div className="grid gap-2 text-xs sm:text-sm">
-          {fieldsToShow.map(([key, value]) => (
-            <div key={key} className="grid grid-cols-[100px_1fr] sm:grid-cols-[120px_1fr] gap-2">
-              <span className="text-gray-600 break-words">{formatFieldName(key)}:</span>
-              <span className="text-gray-900 break-words">{value}</span>
-            </div>
-          ))}
+        <div className="bg-gray-50 p-3 rounded-lg">
+          <div className="grid gap-2 text-xs sm:text-sm">
+            {fieldsToShow.map(([key, value]) => (
+              <div key={key} className="grid grid-cols-[100px_1fr] sm:grid-cols-[120px_1fr] gap-2">
+                <span className="text-gray-600 break-words">{formatFieldName(key)}:</span>
+                <span className="text-gray-900 break-words">{value}</span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -140,13 +142,15 @@ export function MatchCard({ match, index, filename, onDownload, isDownloading }:
           <MapPin className="h-4 w-4" />
           Spielstätte
         </h4>
-        <div className="grid gap-2 text-xs sm:text-sm">
-          {fieldsToShow.map(([key, value]) => (
-            <div key={key} className="grid grid-cols-[100px_1fr] sm:grid-cols-[120px_1fr] gap-2">
-              <span className="text-gray-600 break-words">{formatFieldName(key)}:</span>
-              <span className="text-gray-900 break-words">{value}</span>
-            </div>
-          ))}
+        <div className="bg-gray-50 p-3 rounded-lg">
+          <div className="grid gap-2 text-xs sm:text-sm">
+            {fieldsToShow.map(([key, value]) => (
+              <div key={key} className="grid grid-cols-[100px_1fr] sm:grid-cols-[120px_1fr] gap-2">
+                <span className="text-gray-600 break-words">{formatFieldName(key)}:</span>
+                <span className="text-gray-900 break-words">{value}</span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     );
