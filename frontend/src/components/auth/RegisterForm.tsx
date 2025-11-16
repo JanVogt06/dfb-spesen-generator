@@ -46,7 +46,7 @@ export function RegisterForm() {
       <CardHeader>
         <CardTitle>Registrieren</CardTitle>
         <CardDescription>
-          Erstelle einen neuen DFB Spesen Generator Account
+          Erstelle einen neuen TFV Spesen Generator Account
         </CardDescription>
       </CardHeader>
       <CardContent>

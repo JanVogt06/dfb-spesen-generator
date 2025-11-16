@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import type { MatchData } from '@/lib/sessions';
+import { ChevronDown, ChevronUp, Download, Calendar, Trophy, Users, MapPin } from 'lucide-react';
 
 interface MatchCardProps {
   match: MatchData;
@@ -63,7 +64,10 @@ export function MatchCard({ match, index, onDownload, filename, isDownloading }:
 
     return (
       <div className="space-y-2">
-        <h4 className="font-semibold text-sm text-gray-700">Spieldaten</h4>
+        <h4 className="font-semibold text-sm text-gray-700 flex items-center gap-1.5">
+          <Trophy className="h-4 w-4 text-blue-600" />
+          Spieldaten
+        </h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
           {entries.map(([key, value]) => (
             <div key={key} className="text-sm">
@@ -82,13 +86,16 @@ export function MatchCard({ match, index, onDownload, filename, isDownloading }:
 
     return (
       <div className="space-y-2">
-        <h4 className="font-semibold text-sm text-gray-700">Schiedsrichter</h4>
+        <h4 className="font-semibold text-sm text-gray-700 flex items-center gap-1.5">
+          <Users className="h-4 w-4 text-blue-600" />
+          Schiedsrichter
+        </h4>
         {schiris.map((schiri, idx) => {
           const entries = Object.entries(schiri).filter(([_, value]) => value);
           if (entries.length === 0) return null;
 
           return (
-            <div key={idx} className="border-l-2 border-gray-200 pl-3 space-y-1">
+            <div key={idx} className="border-l-2 border-blue-200 pl-3 space-y-1 hover:border-blue-400 transition-colors">
               {schiri.rolle && (
                 <div className="font-medium text-sm text-gray-800">{schiri.rolle}</div>
               )}
@@ -118,7 +125,10 @@ export function MatchCard({ match, index, onDownload, filename, isDownloading }:
 
     return (
       <div className="space-y-2">
-        <h4 className="font-semibold text-sm text-gray-700">Spielstätte</h4>
+        <h4 className="font-semibold text-sm text-gray-700 flex items-center gap-1.5">
+          <MapPin className="h-4 w-4 text-blue-600" />
+          Spielstätte
+        </h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
           {entries.map(([key, value]) => (
             <div key={key} className="text-sm">
@@ -132,12 +142,15 @@ export function MatchCard({ match, index, onDownload, filename, isDownloading }:
   };
 
   return (
-    <Card>
+    <Card className="hover:shadow-lg transition-all duration-200 border-gray-200 hover:border-blue-300">
       <CardHeader>
         <div className="flex items-start justify-between">
           <div className="flex-1">
             <CardTitle className="text-base">{getMatchTitle()}</CardTitle>
-            <p className="text-sm text-gray-600 mt-1">{getMatchSubtitle()}</p>
+            <p className="text-sm text-gray-600 mt-1 flex items-center gap-1.5">
+              <Calendar className="h-3.5 w-3.5" />
+              {getMatchSubtitle()}
+            </p>
           </div>
           <div className="flex gap-2 ml-4">
             <Button
@@ -145,13 +158,25 @@ export function MatchCard({ match, index, onDownload, filename, isDownloading }:
               variant="outline"
               onClick={() => setIsExpanded(!isExpanded)}
             >
-              {isExpanded ? 'Weniger' : 'Details'}
+              {isExpanded ? (
+                <>
+                  <ChevronUp className="mr-1 h-4 w-4" />
+                  Weniger
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="mr-1 h-4 w-4" />
+                  Details
+                </>
+              )}
             </Button>
             <Button
               size="sm"
               onClick={() => onDownload(filename)}
               disabled={isDownloading}
+              className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
             >
+              <Download className="mr-1 h-4 w-4" />
               {isDownloading ? 'Lädt...' : 'DOCX'}
             </Button>
           </div>
@@ -159,7 +184,7 @@ export function MatchCard({ match, index, onDownload, filename, isDownloading }:
       </CardHeader>
 
       {isExpanded && (
-        <CardContent className="space-y-4 pt-0">
+        <CardContent className="space-y-4 pt-0 animate-in slide-in-from-top-2 duration-300">
           {!match.spiel_info && !match.schiedsrichter && !match.spielstaette ? (
             <div className="text-sm text-gray-600 py-4">
               Keine Detaildaten verfügbar

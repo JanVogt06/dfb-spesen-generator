@@ -34,7 +34,7 @@ export function LoginForm() {
       <CardHeader>
         <CardTitle>Anmelden</CardTitle>
         <CardDescription>
-          Melde dich mit deinem DFB Spesen Generator Account an
+          Melde dich mit deinem TFV Spesen Generator Account an
         </CardDescription>
       </CardHeader>
       <CardContent>

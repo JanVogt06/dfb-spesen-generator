@@ -7,6 +7,16 @@ import { Button } from '@/components/ui/button';
 import { SessionProgress } from './SessionProgress';
 import { useSessionPolling } from '@/hooks/useSessionPolling';
 import { api } from '@/lib/api';
+import {
+  Clock,
+  PlayCircle,
+  Database,
+  FileText,
+  CheckCircle2,
+  XCircle,
+  Eye,
+  Download
+} from 'lucide-react';
 
 interface SessionCardProps {
   initialSession: Session;
@@ -56,19 +66,45 @@ export function SessionCard({ initialSession }: SessionCardProps) {
   };
 
   const getStatusBadge = (status: string) => {
-    const badges: Record<string, { text: string; className: string }> = {
-      pending: { text: 'Wartend', className: 'bg-gray-100 text-gray-800' },
-      in_progress: { text: 'Läuft', className: 'bg-blue-100 text-blue-800' },
-      scraping: { text: 'Scraping', className: 'bg-yellow-100 text-yellow-800' },
-      generating: { text: 'Generierung', className: 'bg-purple-100 text-purple-800' },
-      completed: { text: 'Fertig', className: 'bg-green-100 text-green-800' },
-      failed: { text: 'Fehler', className: 'bg-red-100 text-red-800' },
+    const badges: Record<string, { text: string; className: string; icon: any }> = {
+      pending: {
+        text: 'Wartend',
+        className: 'bg-gray-100 text-gray-800 border border-gray-200',
+        icon: Clock
+      },
+      in_progress: {
+        text: 'Läuft',
+        className: 'bg-blue-100 text-blue-800 border border-blue-200',
+        icon: PlayCircle
+      },
+      scraping: {
+        text: 'Scraping',
+        className: 'bg-yellow-100 text-yellow-800 border border-yellow-200',
+        icon: Database
+      },
+      generating: {
+        text: 'Generierung',
+        className: 'bg-purple-100 text-purple-800 border border-purple-200',
+        icon: FileText
+      },
+      completed: {
+        text: 'Fertig',
+        className: 'bg-green-100 text-green-800 border border-green-200',
+        icon: CheckCircle2
+      },
+      failed: {
+        text: 'Fehler',
+        className: 'bg-red-100 text-red-800 border border-red-200',
+        icon: XCircle
+      },
     };
 
     const badge = badges[status] || badges.pending;
+    const Icon = badge.icon;
 
     return (
-      <span className={`px-2 py-1 rounded-full text-xs font-medium ${badge.className}`}>
+      <span className={`px-3 py-1.5 rounded-full text-xs font-medium ${badge.className} flex items-center gap-1.5`}>
+        <Icon className="h-3.5 w-3.5" />
         {badge.text}
       </span>
     );
@@ -91,14 +127,14 @@ export function SessionCard({ initialSession }: SessionCardProps) {
   };
 
   return (
-    <Card>
+    <Card className="hover:shadow-lg transition-all duration-200 border-gray-200 hover:border-blue-300">
       <CardHeader>
         <div className="flex justify-between items-start">
           <div>
             <CardTitle className="text-lg">
               {formatSessionTitle(currentSession.created_at)}
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-xs mt-1">
               Session-ID: {currentSession.session_id}
             </CardDescription>
           </div>
@@ -112,7 +148,8 @@ export function SessionCard({ initialSession }: SessionCardProps) {
         {/* Fertig: Download-Buttons */}
         {currentSession.status === 'completed' && (
           <div className="space-y-2">
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-gray-600 flex items-center gap-1.5">
+              <FileText className="h-4 w-4" />
               {getDocxCount()} Spesenabrechnungen generiert
             </p>
             <div className="flex gap-2">
@@ -121,14 +158,16 @@ export function SessionCard({ initialSession }: SessionCardProps) {
                 onClick={() => navigate(`/session/${currentSession.session_id}`)}
                 variant="outline"
               >
+                <Eye className="mr-2 h-4 w-4" />
                 Details anzeigen
               </Button>
               <Button
-                className="flex-1"
+                className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
                 onClick={handleDownload}
                 disabled={isDownloading}
               >
-                {isDownloading ? 'Lädt herunter...' : 'Alle (ZIP)'}
+                <Download className="mr-2 h-4 w-4" />
+                {isDownloading ? 'Lädt...' : 'Alle (ZIP)'}
               </Button>
             </div>
           </div>
@@ -136,7 +175,8 @@ export function SessionCard({ initialSession }: SessionCardProps) {
 
         {/* Fehler */}
         {currentSession.status === 'failed' && (
-          <div className="text-sm text-red-600">
+          <div className="text-sm text-red-600 flex items-center gap-2 p-3 bg-red-50 rounded-lg border border-red-200">
+            <XCircle className="h-4 w-4" />
             Bei der Generierung ist ein Fehler aufgetreten.
           </div>
         )}

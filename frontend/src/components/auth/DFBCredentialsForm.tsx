@@ -52,35 +52,35 @@ export function DFBCredentialsForm() {
   return (
     <Card className="w-full max-w-md">
       <CardHeader>
-        <CardTitle>DFB-Zugangsdaten</CardTitle>
+        <CardTitle>TFV-Zugangsdaten</CardTitle>
         <CardDescription>
-          Speichere deine DFBnet-Zugangsdaten für die automatische Generierung
+          Speichere deine TFVnet-Zugangsdaten für die automatische Generierung
         </CardDescription>
       </CardHeader>
       <CardContent>
         {hasCredentials && (
           <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-md">
             <p className="text-sm text-green-800">
-              ✓ DFB-Credentials sind gespeichert
+              ✓ TFV-Credentials sind gespeichert
             </p>
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="dfbUsername">DFB-Benutzername</Label>
+            <Label htmlFor="dfbUsername">TFV-Benutzername</Label>
             <Input
               id="dfbUsername"
               type="text"
               value={dfbUsername}
               onChange={(e) => setDfbUsername(e.target.value)}
               required
-              placeholder="Dein DFBnet-Benutzername"
+              placeholder="Dein TFVnet-Benutzername"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="dfbPassword">DFB-Passwort</Label>
+            <Label htmlFor="dfbPassword">TFV-Passwort</Label>
             <Input
               id="dfbPassword"
               type="password"
