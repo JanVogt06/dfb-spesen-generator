@@ -165,18 +165,21 @@ def main():
     """
     import uvicorn
 
-    logger.info("Starte DFB Spesen Generator API...")
+    # Port und Host aus Umgebungsvariablen laden
+    API_HOST = os.getenv("API_HOST", "0.0.0.0")
+    API_PORT = int(os.getenv("API_PORT", "8001"))  # Default: 8001 statt 8000
+
+    logger.info("Starte TFV Spesen Generator API...")
     logger.info("==============================================")
-    logger.info("API läuft auf: http://localhost:8000")
+    logger.info(f"API läuft auf: http://{API_HOST}:{API_PORT}")
     logger.info("==============================================")
-    logger.info("Frontend separat starten mit: npm run dev")
 
     # Starte API
     uvicorn.run(
         "api.main_api:app",
-        host="0.0.0.0",
-        port=8000,
-        reload=True
+        host=API_HOST,
+        port=API_PORT,
+        reload=False  # reload=False in Docker!
     )
 
 
