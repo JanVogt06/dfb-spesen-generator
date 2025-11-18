@@ -78,9 +78,9 @@ FRONTEND_DIR = Path(os.getenv("FRONTEND_DIR", "./frontend/dist"))
 if FRONTEND_DIR.exists():
     # Statische Assets (CSS, JS, Bilder)
     app.mount("/assets", StaticFiles(directory=str(FRONTEND_DIR / "assets")), name="assets")
-    logger.info(f"✅ Frontend wird ausgeliefert von: {FRONTEND_DIR}")
+    logger.info(f"Frontend wird ausgeliefert von: {FRONTEND_DIR}")
 else:
-    logger.warning(f"⚠️  Frontend-Verzeichnis nicht gefunden: {FRONTEND_DIR}")
+    logger.warning(f"Frontend-Verzeichnis nicht gefunden: {FRONTEND_DIR}")
 
 # Session Manager global
 session_manager = SessionManager()
@@ -532,8 +532,8 @@ async def debug_session(session_id: str):
     })
 
 
-@app.get("/")
-async def root():
+@app.get("/api/health")
+async def health_check():
     """Health Check Endpoint"""
     return {
         "status": "online",
@@ -543,14 +543,25 @@ async def root():
     }
 
 
-# ===== Frontend Catch-All Route =====
-# WICHTIG: Diese Route MUSS die LETZTE sein!
+# ===== Frontend Routes =====
+@app.get("/")
+async def root():
+    """Serve Frontend Root"""
+    if not FRONTEND_DIR.exists():
+        raise HTTPException(status_code=404, detail="Frontend not available")
+
+    index_path = FRONTEND_DIR / "index.html"
+    if index_path.exists():
+        return FileResponse(str(index_path))
+    else:
+        raise HTTPException(status_code=404, detail="Frontend not found")
+
+
 @app.get("/{full_path:path}")
 async def serve_frontend(full_path: str):
     """
     Catch-All Route für Frontend (React Router).
     Liefert index.html für alle nicht-API Routen.
-    Nur aktiv wenn FRONTEND_DIR existiert.
     """
     # API-Routen überspringen
     if full_path.startswith("api/"):
