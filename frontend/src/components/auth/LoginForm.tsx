@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { login } from '@/lib/auth';
+import { AlertCircle } from 'lucide-react';
 
 export function LoginForm() {
   const [email, setEmail] = useState('');
@@ -15,16 +16,28 @@ export function LoginForm() {
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
+    // KRITISCH: preventDefault MUSS als allererstes kommen!
     e.preventDefault();
+    e.stopPropagation();
+
+    console.log('Form submitted - preventDefault called');
+
     setError('');
+
     setIsLoading(true);
 
     try {
+      console.log('Calling login...');
       await login(email, password);
+      console.log('Login successful, navigating...');
       navigate('/dashboard');
     } catch (err: any) {
-      setError(err.response?.data?.error?.message || 'Login fehlgeschlagen');
+      console.error('Login error:', err);
+      const errorMessage = err.response?.data?.error?.message || 'Login fehlgeschlagen';
+      console.log('Setting error message:', errorMessage);
+      setError(errorMessage);
     } finally {
+      console.log('Setting isLoading to false');
       setIsLoading(false);
     }
   };
@@ -38,7 +51,7 @@ export function LoginForm() {
         </CardDescription>
       </CardHeader>
       <CardContent className="px-4 sm:px-6">
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4" action="javascript:void(0);">
           <div className="space-y-2">
             <Label htmlFor="email" className="text-sm sm:text-base">E-Mail</Label>
             <Input
@@ -49,6 +62,7 @@ export function LoginForm() {
               required
               placeholder="deine@email.de"
               className="text-sm sm:text-base"
+              autoComplete="email"
             />
           </div>
 
@@ -62,16 +76,26 @@ export function LoginForm() {
               required
               placeholder="••••••••"
               className="text-sm sm:text-base"
+              autoComplete="current-password"
             />
           </div>
 
           {error && (
-            <div className="text-sm text-red-500 break-words">
-              {error}
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="h-4 w-4 text-red-600 flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-red-800 break-words">
+                  {error}
+                </p>
+              </div>
             </div>
           )}
 
-          <Button type="submit" className="w-full text-sm sm:text-base" disabled={isLoading}>
+          <Button
+            type="submit"
+            className="w-full text-sm sm:text-base"
+            disabled={isLoading}
+          >
             {isLoading ? 'Anmelden...' : 'Anmelden'}
           </Button>
         </form>

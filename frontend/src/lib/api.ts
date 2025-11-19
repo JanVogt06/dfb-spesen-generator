@@ -21,9 +21,17 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Nur bei 401 UND wenn es NICHT der Login-Endpoint ist
     if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      window.location.href = '/login';
+      const isLoginRequest = error.config?.url?.includes('/api/auth/login');
+      const isRegisterRequest = error.config?.url?.includes('/api/auth/register');
+
+      // Nur redirecten wenn es NICHT Login/Register ist
+      // (Das bedeutet: Token ist abgelaufen während User eingeloggt war)
+      if (!isLoginRequest && !isRegisterRequest) {
+        localStorage.removeItem('token');
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }

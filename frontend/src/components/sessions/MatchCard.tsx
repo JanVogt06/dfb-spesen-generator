@@ -24,14 +24,53 @@ export function MatchCard({ match, index, filename, onDownload, isDownloading }:
 
   const getMatchSubtitle = () => {
     if (match.spiel_info?.anpfiff) {
-      const date = new Date(match.spiel_info.anpfiff);
-      return date.toLocaleString('de-DE', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      }) + ' Uhr';
+      try {
+        // Versuche verschiedene Datums-Formate zu parsen
+        let date: Date;
+
+        // ISO 8601 Format (z.B. "2025-11-20T15:00:00")
+        if (match.spiel_info.anpfiff.includes('T') || match.spiel_info.anpfiff.includes('-')) {
+          date = new Date(match.spiel_info.anpfiff);
+        }
+        // Deutsches Format (z.B. "20.11.2025 15:00")
+        else if (match.spiel_info.anpfiff.includes('.')) {
+          const parts = match.spiel_info.anpfiff.split(' ');
+          if (parts.length >= 2) {
+            const [day, month, year] = parts[0].split('.');
+            const time = parts[1] || '00:00';
+            date = new Date(`${year}-${month}-${day}T${time}`);
+          } else {
+            // Nur Datum ohne Uhrzeit
+            const [day, month, year] = parts[0].split('.');
+            date = new Date(`${year}-${month}-${day}`);
+          }
+        }
+        // Falls bereits ein Timestamp
+        else if (!isNaN(Number(match.spiel_info.anpfiff))) {
+          date = new Date(Number(match.spiel_info.anpfiff));
+        }
+        else {
+          // Fallback: Versuche direktes Parsen
+          date = new Date(match.spiel_info.anpfiff);
+        }
+
+        // Prüfe, ob das Datum gültig ist
+        if (isNaN(date.getTime())) {
+          console.warn('Invalid date format:', match.spiel_info.anpfiff);
+          return match.spiel_info.anpfiff; // Gib den Original-String zurück
+        }
+
+        return date.toLocaleString('de-DE', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        }) + ' Uhr';
+      } catch (error) {
+        console.error('Error parsing date:', error, match.spiel_info.anpfiff);
+        return match.spiel_info.anpfiff; // Gib den Original-String zurück
+      }
     }
     return 'Keine Zeitangabe';
   };
@@ -157,61 +196,48 @@ export function MatchCard({ match, index, filename, onDownload, isDownloading }:
   };
 
   return (
-    <Card className="hover:shadow-lg transition-all duration-200 border-gray-200 hover:border-blue-300">
-      <CardHeader>
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+    <Card className="hover:shadow-lg transition-all duration-200 border-gray-200">
+      <CardHeader className="pb-3">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
           <div className="flex-1 min-w-0">
-            <CardTitle className="text-sm sm:text-base break-words">{getMatchTitle()}</CardTitle>
-            <p className="text-xs sm:text-sm text-gray-600 mt-1 flex items-center gap-1.5">
-              <Calendar className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />
-              <span className="break-words">{getMatchSubtitle()}</span>
+            <CardTitle className="text-base sm:text-lg mb-1 break-words">
+              {getMatchTitle()}
+            </CardTitle>
+            <p className="text-xs sm:text-sm text-gray-600 flex items-center gap-1.5 break-words">
+              <Calendar className="h-3.5 w-3.5 flex-shrink-0" />
+              {getMatchSubtitle()}
             </p>
           </div>
-          <div className="flex gap-2 self-start sm:ml-4">
+          <div className="flex gap-2 self-start">
             <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="flex-1 sm:flex-none"
-            >
-              {isExpanded ? (
-                <>
-                  <ChevronUp className="mr-1 h-4 w-4" />
-                  <span className="hidden sm:inline">Weniger</span>
-                </>
-              ) : (
-                <>
-                  <ChevronDown className="mr-1 h-4 w-4" />
-                  <span className="hidden sm:inline">Details</span>
-                </>
-              )}
-            </Button>
-            <Button
-              size="sm"
               onClick={() => onDownload(filename)}
               disabled={isDownloading}
-              className="flex-1 sm:flex-none bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
+              size="sm"
+              className="whitespace-nowrap"
             >
-              <Download className="mr-1 h-4 w-4" />
-              {isDownloading ? 'Lädt...' : 'DOCX'}
+              <Download className="mr-1.5 h-3.5 w-3.5" />
+              {isDownloading ? 'Lade...' : 'Download'}
+            </Button>
+            <Button
+              onClick={() => setIsExpanded(!isExpanded)}
+              variant="outline"
+              size="sm"
+            >
+              {isExpanded ? (
+                <ChevronUp className="h-4 w-4" />
+              ) : (
+                <ChevronDown className="h-4 w-4" />
+              )}
             </Button>
           </div>
         </div>
       </CardHeader>
 
       {isExpanded && (
-        <CardContent className="space-y-4 pt-0 animate-in slide-in-from-top-2 duration-300">
-          {!match.spiel_info && !match.schiedsrichter && !match.spielstaette ? (
-            <div className="text-sm text-gray-600 py-4">
-              Keine Detaildaten verfügbar
-            </div>
-          ) : (
-            <>
-              {renderSpielInfo()}
-              {renderSchiedsrichter()}
-              {renderSpielstaette()}
-            </>
-          )}
+        <CardContent className="pt-0 space-y-4">
+          {renderSpielInfo()}
+          {renderSchiedsrichter()}
+          {renderSpielstaette()}
         </CardContent>
       )}
     </Card>

@@ -51,8 +51,8 @@ export function DashboardPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
-        {/* Header mit Gradient */}
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl sm:rounded-2xl shadow-lg mb-6 sm:mb-8 p-4 sm:p-6 lg:p-8 text-white">
+        {/* Header - verwendet jetzt primary Farbe */}
+        <div className="bg-primary rounded-xl sm:rounded-2xl shadow-lg mb-6 sm:mb-8 p-4 sm:p-6 lg:p-8 text-primary-foreground">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold">TFV Spesen Generator</h1>
@@ -78,13 +78,13 @@ export function DashboardPage() {
           </div>
         </div>
 
-        {/* Generierungs-Button */}
+        {/* Generierungs-Button - Verwendet jetzt die primary Farbe konsistent */}
         <div className="mb-6 sm:mb-8">
           <Button
             onClick={handleStartGeneration}
             disabled={isGenerating}
             size="lg"
-            className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg hover:shadow-xl"
+            className="w-full sm:w-auto shadow-lg hover:shadow-xl"
           >
             <Zap className="mr-2 h-5 w-5" />
             {isGenerating ? 'Starte Generierung...' : 'Neue Spesen generieren'}
@@ -106,7 +106,7 @@ export function DashboardPage() {
 
           {isLoading ? (
             <div className="text-center py-12">
-              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
               <p className="text-gray-600 mt-4">Lade Sessions...</p>
             </div>
           ) : (

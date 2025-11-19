@@ -52,36 +52,36 @@ export function DFBCredentialsForm() {
   return (
     <Card className="w-full max-w-md mx-4 sm:mx-0">
       <CardHeader className="px-4 sm:px-6">
-        <CardTitle className="text-xl sm:text-2xl">TFV-Zugangsdaten</CardTitle>
+        <CardTitle className="text-xl sm:text-2xl">DFB-Zugangsdaten</CardTitle>
         <CardDescription className="text-sm">
-          Speichere deine TFVnet-Zugangsdaten für die automatische Generierung
+          Speichere deine DFBnet-Zugangsdaten für die automatische Generierung
         </CardDescription>
       </CardHeader>
       <CardContent className="px-4 sm:px-6">
         {hasCredentials && (
           <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-md">
             <p className="text-sm text-green-800">
-              ✓ TFV-Credentials sind gespeichert
+              ✓ DFB-Credentials sind gespeichert
             </p>
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="dfbUsername" className="text-sm sm:text-base">TFV-Benutzername</Label>
+            <Label htmlFor="dfbUsername" className="text-sm sm:text-base">DFB-Benutzername</Label>
             <Input
               id="dfbUsername"
               type="text"
               value={dfbUsername}
               onChange={(e) => setDfbUsername(e.target.value)}
               required
-              placeholder="Dein TFVnet-Benutzername"
+              placeholder="Dein DFBnet-Benutzername"
               className="text-sm sm:text-base"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="dfbPassword" className="text-sm sm:text-base">TFV-Passwort</Label>
+            <Label htmlFor="dfbPassword" className="text-sm sm:text-base">DFB-Passwort</Label>
             <Input
               id="dfbPassword"
               type="password"

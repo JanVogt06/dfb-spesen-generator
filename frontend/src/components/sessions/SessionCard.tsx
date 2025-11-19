@@ -127,7 +127,7 @@ export function SessionCard({ initialSession }: SessionCardProps) {
   };
 
   return (
-    <Card className="hover:shadow-lg transition-all duration-200 border-gray-200 hover:border-blue-300">
+    <Card className="hover:shadow-lg transition-all duration-200 border-gray-200 hover:border-primary/30">
       <CardHeader>
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
           <div className="flex-1 min-w-0">
@@ -164,7 +164,7 @@ export function SessionCard({ initialSession }: SessionCardProps) {
                 Details anzeigen
               </Button>
               <Button
-                className="flex-1 w-full sm:w-auto bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
+                className="flex-1 w-full sm:w-auto"
                 onClick={handleDownload}
                 disabled={isDownloading}
               >
