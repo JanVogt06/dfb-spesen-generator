@@ -1,3 +1,5 @@
+import { api } from './api';
+
 // Match Data Types - basierend auf tatsächlicher DFBnet-Struktur
 export interface SpielInfo {
   anpfiff?: string;
@@ -31,4 +33,15 @@ export interface MatchData {
   spiel_info: SpielInfo;
   schiedsrichter: Schiedsrichter[];
   spielstaette: Spielstaette;
+  // Metadata von Backend
+  _session_id?: string;
+  _datum?: string;
+  _created_at?: string;
+  _filename?: string;  // NEU: Echter Dateiname für Downloads
+}
+
+// API Funktionen
+export async function getAllMatches(): Promise<MatchData[]> {
+  const response = await api.get<MatchData[]>('/api/matches');
+  return response.data;
 }

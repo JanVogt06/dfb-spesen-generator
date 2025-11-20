@@ -254,6 +254,137 @@ async def get_user_sessions_list(current_user: dict = Depends(get_current_user))
     return response_sessions
 
 
+# src/api/main_api.py - KORREKTE Zuordnung
+
+@app.get("/api/matches")
+async def get_all_user_matches(current_user: dict = Depends(get_current_user)):
+    """
+    Gibt alle Spiele des Users zurück (dedupliziert über alle Sessions).
+    """
+    user_id = current_user['id']
+
+    try:
+        db_sessions = get_user_sessions(user_id)
+        logger.info(f"Lade Matches für User {user_id}, {len(db_sessions)} Sessions gefunden")
+
+        all_matches_dict = {}
+
+        for db_session in db_sessions:
+            session_id = db_session['session_id']
+            session_path = session_manager.get_session_by_id(session_id)
+
+            if not session_path or not session_path.exists():
+                logger.warning(f"Session-Pfad nicht gefunden: {session_id}")
+                continue
+
+            matches_file = session_path / "spesen_data.json"
+            if not matches_file.exists():
+                logger.warning(f"spesen_data.json nicht gefunden in {session_id}")
+                continue
+
+            try:
+                with open(matches_file, 'r', encoding='utf-8') as f:
+                    session_matches = json.load(f)
+
+                logger.info(f"Session {session_id}: {len(session_matches)} Spiele geladen")
+
+                for match in session_matches:
+                    spiel_info = match.get('spiel_info', {})
+                    heim = spiel_info.get('heim_team', '')
+                    gast = spiel_info.get('gast_team', '')
+
+                    if not heim or not gast:
+                        logger.warning(f"Spiel ohne Heim/Gast-Team in {session_id}")
+                        continue
+
+                    # Generiere Dateinamen mit Helper-Funktion
+                    filename = generate_filename_from_match(match)
+
+                    # Prüfe ob Datei existiert
+                    file_path = session_path / filename
+                    if not file_path.exists():
+                        logger.warning(f"Datei nicht gefunden: {filename} in {session_id}")
+                        continue
+
+                    # Extrahiere Datum für Deduplizierung und Sortierung
+                    datum = extract_date_from_anpfiff(spiel_info.get('anpfiff', ''))
+                    key = (heim, gast, datum)
+
+                    # Deduplizierung: Neuere Session gewinnt
+                    if key not in all_matches_dict or db_session['created_at'] > all_matches_dict[key]['_created_at']:
+                        match['_session_id'] = session_id
+                        match['_datum'] = datum
+                        match['_created_at'] = db_session['created_at']
+                        match['_filename'] = filename
+                        all_matches_dict[key] = match
+
+            except Exception as e:
+                logger.error(f"Fehler beim Lesen von {matches_file}: {e}")
+                logger.error(traceback.format_exc())
+                continue
+
+        # Konvertiere zu Liste und sortiere nach Datum (neueste zuerst)
+        matches_list = list(all_matches_dict.values())
+        matches_list.sort(key=lambda x: x['_datum'], reverse=True)
+
+        logger.info(f"Gesamt: {len(matches_list)} deduplizierte Spiele für User {user_id}")
+        return JSONResponse(content=matches_list)
+
+    except Exception as e:
+        logger.error(f"Fehler beim Laden aller Matches: {e}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+def generate_filename_from_match(match: dict) -> str:
+    """
+    Generiert Dateinamen EXAKT wie im Generator.
+    Diese Funktion wird sowohl für /api/matches als auch /api/session/{id}/matches verwendet.
+
+    Args:
+        match: Match-Dictionary mit spiel_info
+
+    Returns:
+        Dateiname im Format: Spesen_{heim}_vs_{gast}_{datum}.docx
+    """
+    import re
+
+    spiel_info = match.get('spiel_info', {})
+    heim = spiel_info.get('heim_team', '')
+    gast = spiel_info.get('gast_team', '')
+    anpfiff = spiel_info.get('anpfiff', '')
+
+    # Extrahiere Datum im Format "08.11.2025"
+    datum_match = re.search(r'(\d{2}\.\d{2}\.\d{4})', anpfiff)
+    if datum_match:
+        datum_display = datum_match.group(1)
+        datum_clean = datum_display.replace('.', '-')
+    else:
+        datum_clean = "01-01-2000"
+
+    # Bereinige Team-Namen wie im Generator
+    heim_clean = heim.replace('/', '-')
+    gast_clean = gast.replace('/', '-')
+
+    # Generiere Dateinamen EXAKT wie im Generator
+    return f"Spesen_{heim_clean}_vs_{gast_clean}_{datum_clean}.docx"
+
+
+def extract_date_from_anpfiff(anpfiff: str) -> str:
+    """
+    Extrahiert ISO-Datum aus Anpfiff-String für Sortierung.
+    Input: "Samstag · 08.11.2025 · 13:00 Uhr"
+    Output: "2025-11-08"
+    """
+    import re
+
+    match = re.search(r'(\d{2})\.(\d{2})\.(\d{4})', anpfiff)
+    if match:
+        day, month, year = match.groups()
+        return f"{year}-{month}-{day}"
+
+    return "1900-01-01"
+
 @app.get("/api/session/{session_id}", response_model=SessionResponse)
 async def get_session_status(
     session_id: str,
@@ -300,40 +431,42 @@ async def get_session_status(
 
 @app.get("/api/session/{session_id}/matches")
 async def get_session_matches(
-    session_id: str,
-    current_user: dict = Depends(get_current_user)
+        session_id: str,
+        current_user: dict = Depends(get_current_user)
 ):
     """
-    Gibt die kompletten Match-Daten einer Session zurueck.
+    Gibt die kompletten Match-Daten einer Session zurück.
+    Inkludiert die korrekten Dateinamen für Downloads.
     """
     user_id = current_user['id']
 
-    # Pruefe ob Session dem User gehoert
     db_session = db_get_session_by_id(session_id)
-
     if not db_session:
         raise NotFoundError("Session nicht gefunden")
 
     if db_session['user_id'] != user_id:
         raise AuthorizationError("Diese Session gehört einem anderen User")
 
-    # Hole Session-Pfad
     session_path = session_manager.get_session_by_id(session_id)
-
     if not session_path:
         raise NotFoundError("Session nicht gefunden")
 
-    # Lade spesen_data.json
     data_file = session_path / "spesen_data.json"
-
     if not data_file.exists():
-        # Wenn noch keine Daten vorhanden, gebe leere Liste zurueck
         return []
 
     try:
         with open(data_file, 'r', encoding='utf-8') as f:
             matches_data = json.load(f)
+
+        # Füge Dateinamen zu jedem Match hinzu (mit Helper-Funktion)
+        for match in matches_data:
+            filename = generate_filename_from_match(match)
+            match['_filename'] = filename
+            match['_session_id'] = session_id
+
         return matches_data
+
     except Exception as e:
         logger.error(f"Fehler beim Laden der Match-Daten: {e}")
         raise APIError(f"Fehler beim Laden der Match-Daten: {str(e)}")
