@@ -4,6 +4,7 @@ uvicorn[standard]
 pydantic[email]
 python-dotenv
 python-multipart
+APScheduler
 
 # Security
 pyjwt

@@ -17,6 +17,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
+from scheduler import get_scheduler
 
 src_path = Path(__file__).parent.parent
 if str(src_path) not in sys.path:
@@ -62,6 +63,18 @@ app.add_exception_handler(Exception, generic_exception_handler)
 async def startup_event():
     init_database()
     logger.info("Datenbank initialisiert")
+
+    # Scheduler starten
+    scheduler = get_scheduler()
+    scheduler.start()
+    logger.info("Automatischer Session-Scheduler gestartet")
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Stoppt den Scheduler beim Beenden der App"""
+    scheduler = get_scheduler()
+    scheduler.stop()
+    logger.info("Scheduler gestoppt")
 
 # CORS Middleware
 app.add_middleware(
@@ -615,6 +628,51 @@ async def download_file(
         filename=filename,
         media_type=media_type
     )
+
+
+@app.post("/api/scheduler/trigger")
+async def trigger_scheduler_now(current_user: dict = Depends(get_current_user)):
+    """
+    Triggert die automatische Session-Erstellung sofort (für Admin/Testzwecke).
+    Erfordert Authentifizierung.
+
+    ACHTUNG: Startet Session-Erstellung für ALLE User!
+    """
+    logger.info(f"Manueller Scheduler-Trigger durch User {current_user['email']}")
+
+    scheduler = get_scheduler()
+
+    # Starte in Background Task (nicht blockierend)
+    import asyncio
+    asyncio.create_task(scheduler.trigger_now())
+
+    return {
+        "success": True,
+        "message": "Automatische Session-Erstellung wurde gestartet",
+        "note": "Die Verarbeitung läuft im Hintergrund und kann einige Minuten dauern"
+    }
+
+
+@app.get("/api/scheduler/status")
+async def get_scheduler_status(current_user: dict = Depends(get_current_user)):
+    """
+    Gibt den Status des Schedulers zurück.
+    """
+    scheduler = get_scheduler()
+    job = scheduler.scheduler.get_job("auto_session_creation")
+
+    if job:
+        return {
+            "running": True,
+            "next_run": job.next_run_time.isoformat() if job.next_run_time else None,
+            "job_name": job.name,
+            "schedule": "Täglich um 3:00 Uhr"
+        }
+    else:
+        return {
+            "running": False,
+            "message": "Scheduler läuft nicht"
+        }
 
 
 @app.get("/api/debug/session/{session_id}")

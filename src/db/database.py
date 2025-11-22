@@ -129,6 +129,24 @@ def get_user_by_id(user_id: int) -> Optional[Dict]:
     return None
 
 
+def get_all_users() -> List[Dict]:
+    """
+    Gibt alle User aus der Datenbank zurück.
+
+    Returns:
+        Liste von User-Dicts
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT id, email, created_at FROM users")
+    users = [dict(row) for row in cursor.fetchall()]
+
+    conn.close()
+
+    return users
+
+
 def update_dfb_credentials(user_id: int, dfb_username_encrypted: str, dfb_password_encrypted: str):
     """
     Speichert verschluesselte DFB-Credentials fuer User.
