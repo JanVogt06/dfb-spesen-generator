@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { LoginPage } from './pages/Login';
 import { RegisterPage } from './pages/Register';
+import { LandingPage } from './pages/Landing';
 import { DashboardPage } from './pages/Dashboard';
 import { SettingsPage } from './pages/Settings';
 import { SessionDetailPage } from './pages/SessionDetail';
@@ -17,9 +18,12 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Public Routes */}
+        <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
 
+        {/* Protected Routes */}
         <Route
           path="/dashboard"
           element={
@@ -44,17 +48,6 @@ function App() {
             <ProtectedRoute>
               <SessionDetailPage />
             </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/"
-          element={
-            isAuthenticated() ? (
-              <Navigate to="/dashboard" replace />
-            ) : (
-              <Navigate to="/login" replace />
-            )
           }
         />
       </Routes>
