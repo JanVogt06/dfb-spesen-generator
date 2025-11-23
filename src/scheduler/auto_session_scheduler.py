@@ -1,23 +1,98 @@
 """
-Automatischer Session Scheduler
-Erstellt täglich um 3 Uhr morgens für jeden User eine Session
-Maximal 4 Sessions laufen gleichzeitig
+Automatischer Session Scheduler - VEREINFACHT
+Nutzt die bereits existierenden Funktionen aus main.py und main_api.py
 """
+import os
 import asyncio
+import multiprocessing
 from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Any
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 
-from db.database import get_all_users, get_dfb_credentials
+from db.database import (
+    get_all_users,
+    get_dfb_credentials,
+    create_session as db_create_session,
+    update_session_status as db_update_session_status
+)
 from core.encryption import decrypt_credential
-from scraper.dfb_scraper import DFBScraper
-from generator.docx_generator import SpesenGenerator
 from utils.session_manager import SessionManager
 from utils.logger import setup_logger
 
+# Import der bestehenden Funktion aus main_api.py
+from main import scrape_matches_with_session, generate_documents_in_session
+
 logger = setup_logger("auto_scheduler")
+
+
+def run_generation_for_user(user_id: int, email: str, dfb_username: str, dfb_password: str,
+                            session_path: Path, session_id: str):
+    """
+    Führt die komplette Generierung für einen User aus.
+    Läuft in einem separaten Prozess (wie der manuelle /api/generate Endpoint).
+
+    NUTZT DIE BEREITS EXISTIERENDEN UND GETESTETEN FUNKTIONEN!
+    """
+    # Logger im neuen Prozess initialisieren
+    process_logger = setup_logger("auto_scheduler_worker")
+
+    try:
+        process_logger.info(f"[User {user_id}] Starte Generation für {email}")
+
+        # DFB Credentials als ENV-Variablen setzen (für Scraper)
+        os.environ["DFB_USERNAME"] = dfb_username
+        os.environ["DFB_PASSWORD"] = dfb_password
+
+        # Session Manager im Prozess initialisieren
+        sm = SessionManager()
+
+        # Status: Scraping
+        sm.update_session_metadata(
+            session_path,
+            status="scraping",
+            progress={"current": 0, "total": 0, "step": "DFB Scraping..."}
+        )
+        db_update_session_status(session_id, "scraping")
+
+        # === NUTZE DIE BESTEHENDE FUNKTION AUS MAIN.PY ===
+        matches_data, _ = scrape_matches_with_session(session_path)
+
+        if not matches_data:
+            process_logger.warning(f"[User {user_id}] Keine Spiele gefunden")
+            sm.update_session_metadata(
+                session_path,
+                status="completed",
+                progress={"current": 0, "total": 0, "step": "Keine Spiele gefunden"}
+            )
+            db_update_session_status(session_id, "completed")
+            return
+
+        process_logger.info(f"[User {user_id}] {len(matches_data)} Spiele gescrapt")
+
+        # Status: Generierung
+        sm.update_session_metadata(
+            session_path,
+            status="generating",
+            progress={"current": 0, "total": len(matches_data), "step": "Erstelle Dokumente..."}
+        )
+        db_update_session_status(session_id, "generating")
+
+        # === NUTZE DIE BESTEHENDE FUNKTION AUS MAIN.PY ===
+        generate_documents_in_session(matches_data, session_path)
+
+        # Status: Abgeschlossen
+        sm.update_session_metadata(session_path, status="completed")
+        db_update_session_status(session_id, "completed")
+
+        process_logger.info(f"[User {user_id}] Session erfolgreich abgeschlossen")
+
+    except Exception as e:
+        process_logger.error(f"[User {user_id}] Fehler: {e}", exc_info=True)
+        sm = SessionManager()
+        sm.update_session_metadata(session_path, status="failed")
+        db_update_session_status(session_id, "failed")
 
 
 class AutoSessionScheduler:
@@ -27,31 +102,25 @@ class AutoSessionScheduler:
         """Initialisiert den Scheduler"""
         self.scheduler = AsyncIOScheduler()
         self.session_manager = SessionManager()
-        self.max_concurrent = 4  # Maximal 4 gleichzeitige Sessions
+        self.max_concurrent = 4
         self.semaphore = asyncio.Semaphore(self.max_concurrent)
         logger.info(f"AutoSessionScheduler initialisiert (max {self.max_concurrent} gleichzeitige Sessions)")
 
     async def process_user_session(self, user: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Verarbeitet eine Session für einen einzelnen User
-
-        Args:
-            user: User-Dictionary mit id, email, etc.
-
-        Returns:
-            Dictionary mit Ergebnis-Informationen
+        Startet Session-Erstellung für einen User in einem separaten Prozess.
         """
-        async with self.semaphore:  # Limitiert auf max_concurrent gleichzeitige Ausführungen
+        async with self.semaphore:
             user_id = user['id']
             email = user['email']
 
             try:
-                logger.info(f"[User {user_id}] Starte automatische Session für {email}")
+                logger.info(f"[User {user_id}] Starte Session für {email}")
 
                 # 1. DFB Credentials holen
                 credentials = get_dfb_credentials(user_id)
                 if not credentials:
-                    logger.warning(f"[User {user_id}] Keine DFB-Credentials gespeichert - überspringe")
+                    logger.warning(f"[User {user_id}] Keine DFB-Credentials - überspringe")
                     return {
                         "user_id": user_id,
                         "email": email,
@@ -63,114 +132,38 @@ class AutoSessionScheduler:
                 dfb_username = decrypt_credential(credentials['dfb_username_encrypted'])
                 dfb_password = decrypt_credential(credentials['dfb_password_encrypted'])
 
-                # 2. Session-Ordner erstellen
+                # 2. Session erstellen
                 session_path = self.session_manager.create_session()
-                logger.info(f"[User {user_id}] Session erstellt: {session_path.name}")
+                session_id = session_path.name
 
-                # 3. DFB Scraping starten
-                self.session_manager.update_session_metadata(
-                    session_path,
-                    status="scraping",
-                    progress={"current": 0, "total": 0, "step": "DFB-Login..."}
+                # In DB speichern
+                db_create_session(session_id, user_id)
+
+                logger.info(f"[User {user_id}] Session erstellt: {session_id}")
+
+                # 3. Generierung in separatem Prozess starten
+                # (GENAU WIE DER MANUELLE /api/generate ENDPOINT!)
+                process = multiprocessing.Process(
+                    target=run_generation_for_user,
+                    args=(user_id, email, dfb_username, dfb_password, session_path, session_id),
+                    daemon=True
                 )
+                process.start()
 
-                scraper = DFBScraper(headless=True)
+                # Warte bis Prozess fertig ist (für max_concurrent Limitierung)
+                await asyncio.get_event_loop().run_in_executor(None, process.join)
 
-                # Progress Callback für Updates
-                def progress_callback(current: int, total: int, message: str):
-                    self.session_manager.update_session_metadata(
-                        session_path,
-                        progress={"current": current, "total": total, "step": message}
-                    )
-
-                try:
-                    with scraper:
-                        # Login
-                        scraper.login(dfb_username, dfb_password)
-                        logger.info(f"[User {user_id}] DFB-Login erfolgreich")
-
-                        # Spiele scrapen
-                        matches = scraper.scrape_all_matches(progress_callback=progress_callback)
-
-                        if not matches:
-                            logger.warning(f"[User {user_id}] Keine Spiele gefunden")
-                            self.session_manager.update_session_metadata(
-                                session_path,
-                                status="completed",
-                                progress={"current": 0, "total": 0, "step": "Keine Spiele gefunden"}
-                            )
-                            return {
-                                "user_id": user_id,
-                                "email": email,
-                                "success": True,
-                                "matches_count": 0,
-                                "session_id": session_path.name
-                            }
-
-                        logger.info(f"[User {user_id}] {len(matches)} Spiele gescrapt")
-
-                except Exception as e:
-                    logger.error(f"[User {user_id}] Scraping fehlgeschlagen: {e}")
-                    self.session_manager.update_session_metadata(
-                        session_path,
-                        status="error",
-                        progress={"current": 0, "total": 0, "step": f"Scraping-Fehler: {str(e)}"}
-                    )
-                    raise
-
-                # 4. Dokumente generieren
-                self.session_manager.update_session_metadata(
-                    session_path,
-                    status="generating",
-                    progress={"current": 0, "total": len(matches), "step": "Generiere Dokumente..."}
-                )
-
-                generator = SpesenGenerator(str(session_path))
-                generated_files = []
-
-                for i, match in enumerate(matches, 1):
-                    try:
-                        output_file = generator.generate_document(match)
-                        generated_files.append(Path(output_file).name)
-                        logger.info(f"[User {user_id}] Dokument {i}/{len(matches)} generiert")
-
-                        self.session_manager.update_session_metadata(
-                            session_path,
-                            progress={
-                                "current": i,
-                                "total": len(matches),
-                                "step": f"Generiere Dokument {i}/{len(matches)}"
-                            }
-                        )
-                    except Exception as e:
-                        logger.error(f"[User {user_id}] Fehler bei Dokument {i}: {e}")
-                        continue
-
-                # 5. Session abschließen
-                self.session_manager.update_session_metadata(
-                    session_path,
-                    status="completed",
-                    files=generated_files,
-                    progress={
-                        "current": len(generated_files),
-                        "total": len(matches),
-                        "step": "Abgeschlossen"
-                    }
-                )
-
-                logger.info(f"[User {user_id}] Session erfolgreich abgeschlossen: {len(generated_files)} Dokumente")
+                logger.info(f"[User {user_id}] Prozess abgeschlossen")
 
                 return {
                     "user_id": user_id,
                     "email": email,
                     "success": True,
-                    "matches_count": len(matches),
-                    "documents_count": len(generated_files),
-                    "session_id": session_path.name
+                    "session_id": session_id
                 }
 
             except Exception as e:
-                logger.error(f"[User {user_id}] Fehler bei Session-Verarbeitung: {e}", exc_info=True)
+                logger.error(f"[User {user_id}] Fehler: {e}", exc_info=True)
                 return {
                     "user_id": user_id,
                     "email": email,
@@ -180,8 +173,7 @@ class AutoSessionScheduler:
 
     async def create_sessions_for_all_users(self):
         """
-        Erstellt Sessions für alle User (wird um 3 Uhr ausgeführt)
-        Maximal 4 Sessions laufen gleichzeitig
+        Erstellt Sessions für alle User (wird um 3 Uhr ausgeführt).
         """
         logger.info("=" * 80)
         logger.info("AUTOMATISCHE SESSION-ERSTELLUNG GESTARTET")
@@ -189,42 +181,38 @@ class AutoSessionScheduler:
         logger.info("=" * 80)
 
         try:
-            # Alle User aus der Datenbank holen
             users = get_all_users()
             logger.info(f"Gefunden: {len(users)} User")
 
             if not users:
-                logger.info("Keine User gefunden - beende")
+                logger.info("Keine User gefunden")
                 return
 
-            # Tasks für alle User erstellen
-            tasks = [self.process_user_session(user) for user in users]
+            # Verarbeite alle User sequenziell (das Semaphore limitiert auf max_concurrent)
+            results = []
+            for user in users:
+                result = await self.process_user_session(user)
+                results.append(result)
 
-            # Alle Tasks parallel ausführen (Semaphore limitiert auf max_concurrent)
-            results = await asyncio.gather(*tasks, return_exceptions=True)
-
-            # Ergebnisse auswerten
-            successful = sum(1 for r in results if isinstance(r, dict) and r.get("success"))
-            failed = sum(1 for r in results if isinstance(r, dict) and not r.get("success"))
-            errors = sum(1 for r in results if isinstance(r, Exception))
+            # Zusammenfassung
+            successful = sum(1 for r in results if r.get("success"))
+            failed = sum(1 for r in results if not r.get("success"))
 
             logger.info("=" * 80)
             logger.info("AUTOMATISCHE SESSION-ERSTELLUNG ABGESCHLOSSEN")
             logger.info(f"Gesamt: {len(users)} User")
             logger.info(f"Erfolgreich: {successful}")
             logger.info(f"Fehlgeschlagen: {failed}")
-            logger.info(f"Fehler: {errors}")
             logger.info("=" * 80)
 
         except Exception as e:
-            logger.error(f"Kritischer Fehler bei automatischer Session-Erstellung: {e}", exc_info=True)
+            logger.error(f"Kritischer Fehler: {e}", exc_info=True)
 
     def start(self):
         """Startet den Scheduler"""
-        # Job für 3 Uhr morgens registrieren
         self.scheduler.add_job(
             self.create_sessions_for_all_users,
-            CronTrigger(hour=3, minute=0),  # Täglich um 3:00 Uhr
+            CronTrigger(hour=3, minute=0),
             id="auto_session_creation",
             name="Automatische Session-Erstellung (3 Uhr)",
             replace_existing=True
@@ -240,10 +228,7 @@ class AutoSessionScheduler:
         logger.info("Scheduler gestoppt")
 
     async def trigger_now(self):
-        """
-        Manuelles Triggern für Testzwecke
-        Kann über API aufgerufen werden
-        """
+        """Manuelles Triggern für Tests"""
         logger.info("Manueller Trigger - starte Session-Erstellung sofort")
         await self.create_sessions_for_all_users()
 
