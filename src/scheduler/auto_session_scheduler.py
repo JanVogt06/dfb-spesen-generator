@@ -2,12 +2,12 @@
 Automatischer Session Scheduler - VEREINFACHT
 Nutzt die bereits existierenden Funktionen aus main.py und main_api.py
 """
-import os
 import asyncio
 import multiprocessing
 from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Any
+
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 
@@ -21,29 +21,39 @@ from core.encryption import decrypt_credential
 from utils.session_manager import SessionManager
 from utils.logger import setup_logger
 
-# Import der bestehenden Funktion aus main_api.py
+# Import der bestehenden Funktion aus main.py
 from main import scrape_matches_with_session, generate_documents_in_session
 
 logger = setup_logger("auto_scheduler")
 
 
-def run_generation_for_user(user_id: int, email: str, dfb_username: str, dfb_password: str,
-                            session_path: Path, session_id: str):
+def run_generation_for_user(
+    user_id: int,
+    email: str,
+    dfb_username: str,
+    dfb_password: str,
+    session_path: Path,
+    session_id: str
+):
     """
     Führt die komplette Generierung für einen User aus.
     Läuft in einem separaten Prozess (wie der manuelle /api/generate Endpoint).
 
     NUTZT DIE BEREITS EXISTIERENDEN UND GETESTETEN FUNKTIONEN!
+
+    Args:
+        user_id: User-ID für Logging
+        email: User-Email für Logging
+        dfb_username: DFB.net Benutzername (entschlüsselt)
+        dfb_password: DFB.net Passwort (entschlüsselt)
+        session_path: Pfad zum Session-Ordner
+        session_id: Session-ID für DB-Updates
     """
     # Logger im neuen Prozess initialisieren
     process_logger = setup_logger("auto_scheduler_worker")
 
     try:
         process_logger.info(f"[User {user_id}] Starte Generation für {email}")
-
-        # DFB Credentials als ENV-Variablen setzen (für Scraper)
-        os.environ["DFB_USERNAME"] = dfb_username
-        os.environ["DFB_PASSWORD"] = dfb_password
 
         # Session Manager im Prozess initialisieren
         sm = SessionManager()
@@ -56,8 +66,12 @@ def run_generation_for_user(user_id: int, email: str, dfb_username: str, dfb_pas
         )
         db_update_session_status(session_id, "scraping")
 
-        # === NUTZE DIE BESTEHENDE FUNKTION AUS MAIN.PY ===
-        matches_data, _ = scrape_matches_with_session(session_path)
+        # === NUTZE DIE BESTEHENDE FUNKTION AUS MAIN.PY MIT CREDENTIALS ===
+        matches_data, _ = scrape_matches_with_session(
+            session_path,
+            username=dfb_username,
+            password=dfb_password
+        )
 
         if not matches_data:
             process_logger.warning(f"[User {user_id}] Keine Spiele gefunden")
@@ -142,7 +156,7 @@ class AutoSessionScheduler:
                 logger.info(f"[User {user_id}] Session erstellt: {session_id}")
 
                 # 3. Generierung in separatem Prozess starten
-                # (GENAU WIE DER MANUELLE /api/generate ENDPOINT!)
+                # Credentials werden direkt als Parameter übergeben (nicht über ENV!)
                 process = multiprocessing.Process(
                     target=run_generation_for_user,
                     args=(user_id, email, dfb_username, dfb_password, session_path, session_id),

@@ -5,6 +5,7 @@ Startet die FastAPI Backend-Anwendung
 import os
 import json
 from pathlib import Path
+from typing import Optional, Tuple, List
 from dotenv import load_dotenv
 
 from scraper.dfb_scraper import DFBScraper
@@ -19,12 +20,18 @@ load_dotenv(env_path)
 logger = setup_logger("main")
 
 
-def scrape_matches_with_session(session_path: Path = None):
+def scrape_matches_with_session(
+    session_path: Path = None,
+    username: Optional[str] = None,
+    password: Optional[str] = None
+) -> Tuple[Optional[List[dict]], Optional[Path]]:
     """
     Scrapt alle Spiele und speichert die Daten in einer Session.
 
     Args:
         session_path: Optional - spezifischer Session-Pfad
+        username: DFB.net Benutzername (falls None, wird aus ENV geladen - nur für Entwicklung)
+        password: DFB.net Passwort (falls None, wird aus ENV geladen - nur für Entwicklung)
 
     Returns:
         Tuple (matches_data, session_path)
@@ -39,16 +46,16 @@ def scrape_matches_with_session(session_path: Path = None):
     # Session Manager für Updates
     session_mgr = SessionManager()
 
-    # Credentials aus .env laden
-    username = os.getenv("DFB_USERNAME")
-    password = os.getenv("DFB_PASSWORD")
+    # Credentials: Parameter haben Vorrang, dann ENV als Fallback (nur für Entwicklung)
+    dfb_username = username or os.getenv("DFB_USERNAME")
+    dfb_password = password or os.getenv("DFB_PASSWORD")
 
-    if not username or not password:
-        logger.error("DFB_USERNAME oder DFB_PASSWORD nicht in .env gesetzt")
+    if not dfb_username or not dfb_password:
+        logger.error("DFB Credentials fehlen - weder als Parameter noch in ENV")
         return None, None
 
     try:
-        with DFBScraper(headless=True, username=username, password=password) as scraper:
+        with DFBScraper(headless=True, username=dfb_username, password=dfb_password) as scraper:
             # Navigation und Login
             session_mgr.update_session_metadata(
                 session_path,
@@ -96,13 +103,16 @@ def scrape_matches_with_session(session_path: Path = None):
         raise
 
 
-def generate_documents_in_session(matches_data, session_path: Path):
+def generate_documents_in_session(matches_data: List[dict], session_path: Path) -> List[Path]:
     """
     Generiert DOCX-Dokumente in einem Session-Ordner.
 
     Args:
         matches_data: Spieldaten
         session_path: Session-Ordner für Output
+
+    Returns:
+        Liste der generierten Dateipfade
     """
     logger.info("=== DFB Spesen Generator: Erstelle Dokumente ===")
 
@@ -145,13 +155,15 @@ def generate_documents_in_session(matches_data, session_path: Path):
             continue
 
     # Session-Metadata aktualisieren
-    files = [f.name for f in generated_files]
-    files.append("spesen_data.json")
     session_mgr.update_session_metadata(
         session_path,
         status="completed",
-        files=files,
-        progress={"current": len(matches_data), "total": len(matches_data), "step": "Abgeschlossen!"}
+        files=[str(f.name) for f in generated_files],
+        progress={
+            "current": len(matches_data),
+            "total": len(matches_data),
+            "step": "Fertig!"
+        }
     )
 
     logger.info(f"Fertig! {len(generated_files)} Dokumente erstellt in: {session_path}")

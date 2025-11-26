@@ -124,10 +124,21 @@ class SessionResponse(BaseModel):
 
 # ===== Generation Process =====
 
-def run_generation_process(session_path: Path, session_id: str):
+def run_generation_process(
+    session_path: Path,
+    session_id: str,
+    dfb_username: str,
+    dfb_password: str
+):
     """
     Führt die Generierung in einem separaten Prozess aus.
     WICHTIG: Muss eigenständig sein (kein Zugriff auf FastAPI app!)
+
+    Args:
+        session_path: Pfad zum Session-Ordner
+        session_id: Session-ID für DB-Updates
+        dfb_username: DFB.net Benutzername (entschlüsselt)
+        dfb_password: DFB.net Passwort (entschlüsselt)
     """
     # Eigener Logger für den Prozess
     from utils.logger import setup_logger
@@ -147,8 +158,12 @@ def run_generation_process(session_path: Path, session_id: str):
         )
         db_update_session_status(session_id, "scraping")
 
-        # Nutze die bestehende Funktion aus main.py
-        matches_data, _ = scrape_matches_with_session(session_path)
+        # Nutze die bestehende Funktion aus main.py MIT Credentials
+        matches_data, _ = scrape_matches_with_session(
+            session_path,
+            username=dfb_username,
+            password=dfb_password
+        )
 
         if matches_data:
             # Update: Documents generation started
@@ -200,12 +215,9 @@ async def generate_spesen(
     if not dfb_creds:
         raise CredentialsMissingError()
 
-    # Entschluesseln und als Env-Variablen setzen (fuer Scraper)
+    # Entschluesseln
     dfb_username = decrypt_credential(dfb_creds['dfb_username_encrypted'])
     dfb_password = decrypt_credential(dfb_creds['dfb_password_encrypted'])
-
-    os.environ["DFB_USERNAME"] = dfb_username
-    os.environ["DFB_PASSWORD"] = dfb_password
 
     # Neue Session erstellen
     session_path = session_manager.create_session()
@@ -215,9 +227,10 @@ async def generate_spesen(
     db_create_session(session_id, user_id)
 
     # Generierung in eigenem Prozess starten (fuer Playwright-Kompatibilitaet)
+    # Credentials werden direkt als Parameter übergeben (nicht über ENV!)
     process = multiprocessing.Process(
         target=run_generation_process,
-        args=(session_path, session_id),
+        args=(session_path, session_id, dfb_username, dfb_password),
         daemon=True
     )
     process.start()
