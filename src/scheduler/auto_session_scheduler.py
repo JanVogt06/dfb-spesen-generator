@@ -226,7 +226,7 @@ class AutoSessionScheduler:
         """Startet den Scheduler"""
         self.scheduler.add_job(
             self.create_sessions_for_all_users,
-            CronTrigger(hour=3, minute=0),
+            CronTrigger(hour=3, minute=0, timezone="Europe/Berlin"),
             id="auto_session_creation",
             name="Automatische Session-Erstellung (3 Uhr)",
             replace_existing=True
