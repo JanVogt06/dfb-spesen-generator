@@ -9,6 +9,7 @@ import traceback
 from pathlib import Path
 from typing import Dict, List, Optional
 from datetime import datetime
+from contextlib import asynccontextmanager
 import multiprocessing
 
 from fastapi import FastAPI, Depends, HTTPException
@@ -26,7 +27,7 @@ if str(src_path) not in sys.path:
 from main import scrape_matches_with_session, generate_documents_in_session
 from utils.session_manager import SessionManager
 from utils.logger import setup_logger
-from utils.match_utils import generate_filename_from_match, extract_iso_date_from_anpfiff  # NEU
+from utils.match_utils import generate_filename_from_match, extract_iso_date_from_anpfiff
 from db.database import (
     init_database,
     create_session as db_create_session,
@@ -53,16 +54,15 @@ logger = setup_logger("api")
 # Wichtig fuer multiprocessing auf Windows
 multiprocessing.freeze_support()
 
-app = FastAPI(title="TFV Spesen Generator API")
 
-# Exception Handlers registrieren
-app.add_exception_handler(APIError, api_error_handler)
-app.add_exception_handler(Exception, generic_exception_handler)
-
-
-# Datenbank beim Start initialisieren
-@app.on_event("startup")
-async def startup_event():
+# ===== Lifespan Context Manager (ersetzt deprecated on_event) =====
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Lifespan Context Manager für Startup/Shutdown Events.
+    Ersetzt die deprecated @app.on_event Decorator.
+    """
+    # === STARTUP ===
     init_database()
     logger.info("Datenbank initialisiert")
 
@@ -71,14 +71,19 @@ async def startup_event():
     scheduler.start()
     logger.info("Automatischer Session-Scheduler gestartet")
 
+    yield  # App läuft hier
 
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Stoppt den Scheduler beim Beenden der App"""
+    # === SHUTDOWN ===
     scheduler = get_scheduler()
     scheduler.stop()
     logger.info("Scheduler gestoppt")
 
+
+app = FastAPI(title="TFV Spesen Generator API", lifespan=lifespan)
+
+# Exception Handlers registrieren
+app.add_exception_handler(APIError, api_error_handler)
+app.add_exception_handler(Exception, generic_exception_handler)
 
 # CORS Middleware
 app.add_middleware(
@@ -144,11 +149,11 @@ def run_generation_process(
     from utils.logger import setup_logger
     process_logger = setup_logger("generation_process")
 
+    # Session Manager initialisieren
+    sm = SessionManager()
+
     try:
         process_logger.info(f"Starte Generierung für Session {session_path.name}")
-
-        # Session Manager neu initialisieren im Prozess
-        sm = SessionManager()
 
         # Update: Scraping started
         sm.update_session_metadata(
@@ -187,8 +192,7 @@ def run_generation_process(
 
     except Exception as e:
         process_logger.error(f"Fehler in Session {session_path.name}: {e}")
-        # Session Manager neu initialisieren im Prozess
-        sm = SessionManager()
+        # Verwende existierende sm-Instanz (keine Neuinstanziierung nötig)
         sm.update_session_metadata(session_path, status="failed")
         db_update_session_status(session_id, "failed")
 

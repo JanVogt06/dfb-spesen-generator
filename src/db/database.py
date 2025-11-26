@@ -7,6 +7,10 @@ from pathlib import Path
 from datetime import datetime, UTC
 from typing import Dict, List, Optional
 
+from utils.logger import setup_logger
+
+logger = setup_logger("database")
+
 
 # Datenbankpfad
 def get_db_path() -> Path:
@@ -63,7 +67,7 @@ def init_database():
     conn.commit()
     conn.close()
 
-    print(f"Datenbank initialisiert: {DB_PATH}")
+    logger.info(f"Datenbank initialisiert: {DB_PATH}")
 
 
 # ===== USER FUNKTIONEN =====
@@ -131,15 +135,15 @@ def get_user_by_id(user_id: int) -> Optional[Dict]:
 
 def get_all_users() -> List[Dict]:
     """
-    Gibt alle User aus der Datenbank zurück.
+    Gibt alle User zurueck.
 
     Returns:
-        Liste von User-Dicts
+        Liste von User Dicts
     """
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT id, email, created_at FROM users")
+    cursor.execute("SELECT * FROM users")
     users = [dict(row) for row in cursor.fetchall()]
 
     conn.close()
@@ -147,14 +151,14 @@ def get_all_users() -> List[Dict]:
     return users
 
 
-def update_dfb_credentials(user_id: int, dfb_username_encrypted: str, dfb_password_encrypted: str):
+def update_dfb_credentials(user_id: int, encrypted_username: str, encrypted_password: str):
     """
     Speichert verschluesselte DFB-Credentials fuer User.
 
     Args:
         user_id: User ID
-        dfb_username_encrypted: Verschluesselter DFB Username
-        dfb_password_encrypted: Verschluesseltes DFB Passwort
+        encrypted_username: Verschluesselter Username
+        encrypted_password: Verschluesseltes Passwort
     """
     conn = get_connection()
     cursor = conn.cursor()
@@ -163,18 +167,15 @@ def update_dfb_credentials(user_id: int, dfb_username_encrypted: str, dfb_passwo
         UPDATE users 
         SET dfb_username_encrypted = ?, dfb_password_encrypted = ?
         WHERE id = ?
-    """, (dfb_username_encrypted, dfb_password_encrypted, user_id))
+    """, (encrypted_username, encrypted_password, user_id))
 
     conn.commit()
     conn.close()
 
 
-def get_dfb_credentials(user_id: int) -> Optional[Dict[str, str]]:
+def get_dfb_credentials(user_id: int) -> Optional[Dict]:
     """
     Holt verschluesselte DFB-Credentials fuer User.
-
-    Args:
-        user_id: User ID
 
     Returns:
         Dict mit dfb_username_encrypted und dfb_password_encrypted oder None
