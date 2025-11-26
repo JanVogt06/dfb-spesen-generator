@@ -4,6 +4,7 @@ DOCX Generator - Füllt Spesenabrechnung-Vorlage mit Daten
 from pathlib import Path
 from docx import Document
 from utils.logger import setup_logger
+from utils.match_utils import parse_anpfiff, generate_filename_from_match, sanitize_team_name  # NEU
 
 logger = setup_logger("docx_generator")
 
@@ -31,7 +32,6 @@ class SpesenGenerator:
         logger.info(f"Generator initialisiert mit Vorlage: {self.template_path}")
         logger.info(f"Output-Verzeichnis: {self.output_dir}")
 
-    # Rest der Klasse bleibt unverändert...
     def _determine_checkboxes(self, match_data: dict) -> dict:
         """Bestimmt welche Checkboxen aktiviert werden müssen."""
         spiel_info = match_data.get('spiel_info', {})
@@ -91,18 +91,6 @@ class SpesenGenerator:
 
         return checkboxes
 
-    def _parse_anpfiff(self, anpfiff_str: str) -> tuple:
-        """Parsed Anpfiff-String in Datum und Uhrzeit."""
-        try:
-            parts = anpfiff_str.split('·')
-            if len(parts) >= 3:
-                datum = parts[1].strip()
-                uhrzeit = parts[2].replace('Uhr', '').strip()
-                return datum, uhrzeit
-        except:
-            pass
-        return anpfiff_str, ''
-
     def _get_referee_by_role(self, referees: list, role: str) -> dict:
         """Findet Schiedsrichter nach Rolle."""
         for ref in referees:
@@ -150,7 +138,8 @@ class SpesenGenerator:
         doc = Document(self.template_path)
         logger.debug(f"Neue Vorlage geladen für: {spiel_info.get('heim_team', '')} vs {spiel_info.get('gast_team', '')}")
 
-        datum, anstoss = self._parse_anpfiff(spiel_info.get('anpfiff', ''))
+        # Nutze zentrale parse_anpfiff Funktion
+        datum, anstoss = parse_anpfiff(spiel_info.get('anpfiff', ''))
         checkboxes = self._determine_checkboxes(match_data)
 
         sr = self._get_referee_by_role(schiedsrichter, 'SR')
@@ -187,11 +176,9 @@ class SpesenGenerator:
 
         self._replace_placeholders(doc, replacements)
 
+        # Nutze zentrale Dateinamen-Generierung falls kein Filename übergeben
         if not output_filename:
-            heim = spiel_info.get('heim_team', 'Heim').replace('/', '-')
-            gast = spiel_info.get('gast_team', 'Gast').replace('/', '-')
-            datum_clean = datum.replace('.', '-')
-            output_filename = f"Spesen_{heim}_vs_{gast}_{datum_clean}.docx"
+            output_filename = generate_filename_from_match(match_data)
 
         output_path = self.output_dir / output_filename
         doc.save(output_path)

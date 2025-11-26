@@ -26,6 +26,7 @@ if str(src_path) not in sys.path:
 from main import scrape_matches_with_session, generate_documents_in_session
 from utils.session_manager import SessionManager
 from utils.logger import setup_logger
+from utils.match_utils import generate_filename_from_match, extract_iso_date_from_anpfiff  # NEU
 from db.database import (
     init_database,
     create_session as db_create_session,
@@ -58,6 +59,7 @@ app = FastAPI(title="TFV Spesen Generator API")
 app.add_exception_handler(APIError, api_error_handler)
 app.add_exception_handler(Exception, generic_exception_handler)
 
+
 # Datenbank beim Start initialisieren
 @app.on_event("startup")
 async def startup_event():
@@ -69,12 +71,14 @@ async def startup_event():
     scheduler.start()
     logger.info("Automatischer Session-Scheduler gestartet")
 
+
 @app.on_event("shutdown")
 async def shutdown_event():
     """Stoppt den Scheduler beim Beenden der App"""
     scheduler = get_scheduler()
     scheduler.stop()
     logger.info("Scheduler gestoppt")
+
 
 # CORS Middleware
 app.add_middleware(
@@ -100,17 +104,16 @@ session_manager = SessionManager()
 
 app.include_router(auth_router)
 
-logger.info(f"API gestartet - Output-Dir: {session_manager.base_output_dir}")
 
+# ===== Request/Response Models =====
 
 class GenerateRequest(BaseModel):
-    """Request Model fuer Spesen-Generierung"""
-    # DFB-Credentials werden automatisch aus DB geladen
-    pass
+    """Request für Spesen-Generierung"""
+    pass  # Credentials werden aus User-Profil geladen
 
 
 class SessionResponse(BaseModel):
-    """Response Model fuer Session-Info"""
+    """Response mit Session-Informationen"""
     session_id: str
     status: str
     files: List[Dict]
@@ -119,18 +122,21 @@ class SessionResponse(BaseModel):
     progress: Optional[Dict] = None
 
 
+# ===== Generation Process =====
+
 def run_generation_process(session_path: Path, session_id: str):
     """
-    Fuehrt die Generierung in einem separaten Prozess aus.
-    Nutzt die bestehenden Funktionen aus main.py.
+    Führt die Generierung in einem separaten Prozess aus.
+    WICHTIG: Muss eigenständig sein (kein Zugriff auf FastAPI app!)
     """
-    # Logger muss im neuen Prozess neu initialisiert werden
-    process_logger = setup_logger("api_worker")
+    # Eigener Logger für den Prozess
+    from utils.logger import setup_logger
+    process_logger = setup_logger("generation_process")
 
     try:
-        process_logger.info(f"Starte Generierung fuer Session: {session_path.name}")
+        process_logger.info(f"Starte Generierung für Session {session_path.name}")
 
-        # Session Manager im Prozess initialisieren - findet automatisch Projekt-Root
+        # Session Manager neu initialisieren im Prozess
         sm = SessionManager()
 
         # Update: Scraping started
@@ -267,8 +273,6 @@ async def get_user_sessions_list(current_user: dict = Depends(get_current_user))
     return response_sessions
 
 
-# src/api/main_api.py - KORREKTE Zuordnung
-
 @app.get("/api/matches")
 async def get_all_user_matches(current_user: dict = Depends(get_current_user)):
     """
@@ -310,7 +314,7 @@ async def get_all_user_matches(current_user: dict = Depends(get_current_user)):
                         logger.warning(f"Spiel ohne Heim/Gast-Team in {session_id}")
                         continue
 
-                    # Generiere Dateinamen mit Helper-Funktion
+                    # Generiere Dateinamen mit zentraler Helper-Funktion
                     filename = generate_filename_from_match(match)
 
                     # Prüfe ob Datei existiert
@@ -320,7 +324,7 @@ async def get_all_user_matches(current_user: dict = Depends(get_current_user)):
                         continue
 
                     # Extrahiere Datum für Deduplizierung und Sortierung
-                    datum = extract_date_from_anpfiff(spiel_info.get('anpfiff', ''))
+                    datum = extract_iso_date_from_anpfiff(spiel_info.get('anpfiff', ''))
                     key = (heim, gast, datum)
 
                     # Deduplizierung: Neuere Session gewinnt
@@ -348,55 +352,6 @@ async def get_all_user_matches(current_user: dict = Depends(get_current_user)):
         logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
 
-
-def generate_filename_from_match(match: dict) -> str:
-    """
-    Generiert Dateinamen EXAKT wie im Generator.
-    Diese Funktion wird sowohl für /api/matches als auch /api/session/{id}/matches verwendet.
-
-    Args:
-        match: Match-Dictionary mit spiel_info
-
-    Returns:
-        Dateiname im Format: Spesen_{heim}_vs_{gast}_{datum}.docx
-    """
-    import re
-
-    spiel_info = match.get('spiel_info', {})
-    heim = spiel_info.get('heim_team', '')
-    gast = spiel_info.get('gast_team', '')
-    anpfiff = spiel_info.get('anpfiff', '')
-
-    # Extrahiere Datum im Format "08.11.2025"
-    datum_match = re.search(r'(\d{2}\.\d{2}\.\d{4})', anpfiff)
-    if datum_match:
-        datum_display = datum_match.group(1)
-        datum_clean = datum_display.replace('.', '-')
-    else:
-        datum_clean = "01-01-2000"
-
-    # Bereinige Team-Namen wie im Generator
-    heim_clean = heim.replace('/', '-')
-    gast_clean = gast.replace('/', '-')
-
-    # Generiere Dateinamen EXAKT wie im Generator
-    return f"Spesen_{heim_clean}_vs_{gast_clean}_{datum_clean}.docx"
-
-
-def extract_date_from_anpfiff(anpfiff: str) -> str:
-    """
-    Extrahiert ISO-Datum aus Anpfiff-String für Sortierung.
-    Input: "Samstag · 08.11.2025 · 13:00 Uhr"
-    Output: "2025-11-08"
-    """
-    import re
-
-    match = re.search(r'(\d{2})\.(\d{2})\.(\d{4})', anpfiff)
-    if match:
-        day, month, year = match.groups()
-        return f"{year}-{month}-{day}"
-
-    return "1900-01-01"
 
 @app.get("/api/session/{session_id}", response_model=SessionResponse)
 async def get_session_status(
@@ -472,7 +427,7 @@ async def get_session_matches(
         with open(data_file, 'r', encoding='utf-8') as f:
             matches_data = json.load(f)
 
-        # Füge Dateinamen zu jedem Match hinzu (mit Helper-Funktion)
+        # Füge Dateinamen zu jedem Match hinzu (mit zentraler Helper-Funktion)
         for match in matches_data:
             filename = generate_filename_from_match(match)
             match['_filename'] = filename
@@ -507,7 +462,7 @@ async def download_all_as_zip(
     if db_session['user_id'] != user_id:
         raise AuthorizationError("Diese Session gehört einem anderen User")
 
-    logger.info("="*80)
+    logger.info("=" * 80)
     logger.info(f"ZIP-Download START fuer Session: {session_id}")
     logger.info(f"SessionManager base_output_dir: {session_manager.base_output_dir}")
 
@@ -568,7 +523,7 @@ async def download_all_as_zip(
 
         zip_size = zip_path.stat().st_size
         logger.info(f"ZIP erstellt: {zip_size} bytes")
-        logger.info("="*80)
+        logger.info("=" * 80)
 
         return FileResponse(
             path=str(zip_path),
@@ -659,51 +614,42 @@ async def get_scheduler_status(current_user: dict = Depends(get_current_user)):
     Gibt den Status des Schedulers zurück.
     """
     scheduler = get_scheduler()
-    job = scheduler.scheduler.get_job("auto_session_creation")
+    job = scheduler.scheduler.get_job('auto_session_creation')
 
     if job:
         return {
-            "running": True,
-            "next_run": job.next_run_time.isoformat() if job.next_run_time else None,
-            "job_name": job.name,
-            "schedule": "Täglich um 3:00 Uhr"
+            "running": scheduler.scheduler.running,
+            "next_run": str(job.next_run_time) if job.next_run_time else None,
+            "job_id": job.id,
+            "job_name": job.name
         }
     else:
         return {
-            "running": False,
-            "message": "Scheduler läuft nicht"
+            "running": scheduler.scheduler.running,
+            "next_run": None,
+            "job_id": None,
+            "job_name": None
         }
 
 
 @app.get("/api/debug/session/{session_id}")
-async def debug_session(session_id: str):
-    """
-    DEBUG-Endpoint: Zeigt alle Details einer Session
-    """
+async def debug_session(session_id: str, current_user: dict = Depends(get_current_user)):
+    """Debug-Endpoint um Session-Details zu prüfen"""
     session_path = session_manager.get_session_by_id(session_id)
 
     if not session_path:
         return JSONResponse({
             "error": "Session nicht gefunden",
             "session_id": session_id,
-            "base_output_dir": str(session_manager.base_output_dir),
-            "expected_path": str(session_manager.base_output_dir / session_id)
+            "base_output_dir": str(session_manager.base_output_dir)
         })
 
-    # Alle Dateien im Ordner
-    all_files = [
-        {
-            "name": f.name,
-            "size": f.stat().st_size,
-            "is_file": f.is_file(),
-            "is_dir": f.is_dir()
-        }
-        for f in session_path.glob("*")
-    ]
+    # Alle Dateien auflisten
+    all_files = [f.name for f in session_path.iterdir()] if session_path.exists() else []
 
     # Metadata laden
-    metadata_path = session_path / "metadata.json"
     metadata = {}
+    metadata_path = session_path / "metadata.json"
     if metadata_path.exists():
         with open(metadata_path, 'r', encoding='utf-8') as f:
             metadata = json.load(f)
