@@ -4,7 +4,8 @@ DOCX Generator - Füllt Spesenabrechnung-Vorlage mit Daten
 from pathlib import Path
 from docx import Document
 from utils.logger import setup_logger
-from utils.match_utils import parse_anpfiff, generate_filename_from_match, sanitize_team_name  # NEU
+from utils.match_utils import parse_anpfiff, generate_filename_from_match, sanitize_team_name
+from generator.spesen_calculator import calculate_spesen, format_spesen
 
 logger = setup_logger("docx_generator")
 
@@ -129,6 +130,35 @@ class SpesenGenerator:
                                     if paragraph.runs:
                                         paragraph.runs[0].text = new_text
 
+    def _calculate_spesen_for_match(self, match_data: dict, is_punktspiel: bool) -> tuple:
+        """
+        Berechnet Spesen für ein Spiel.
+
+        Args:
+            match_data: Match-Daten
+            is_punktspiel: True wenn Punktspiel (Checkbox aktiviert)
+
+        Returns:
+            Tuple (sr_spesen_str, sra_spesen_str) - formatierte Strings oder leer
+        """
+        # Nur für Punktspiele berechnen
+        if not is_punktspiel:
+            return ("", "")
+
+        spiel_info = match_data.get('spiel_info', {})
+        spielklasse = spiel_info.get('spielklasse', '')
+        mannschaftsart = spiel_info.get('mannschaftsart', '')
+
+        sr_spesen, sra_spesen = calculate_spesen(spielklasse, mannschaftsart)
+
+        sr_spesen_str = format_spesen(sr_spesen)
+        sra_spesen_str = format_spesen(sra_spesen)
+
+        if sr_spesen_str:
+            logger.info(f"Spesen berechnet: SR={sr_spesen_str}, SRA={sra_spesen_str or '-'}")
+
+        return (sr_spesen_str, sra_spesen_str)
+
     def generate_document(self, match_data: dict, output_filename: str = None) -> Path:
         """Generiert ein ausgefülltes Dokument für ein Spiel."""
         spiel_info = match_data.get('spiel_info', {})
@@ -142,6 +172,10 @@ class SpesenGenerator:
         datum, anstoss = parse_anpfiff(spiel_info.get('anpfiff', ''))
         checkboxes = self._determine_checkboxes(match_data)
 
+        # Spesen berechnen (nur für Punktspiele)
+        is_punktspiel = checkboxes['CHECKBOX_PUNKTSPIEL'] == '☑'
+        sr_spesen_str, sra_spesen_str = self._calculate_spesen_for_match(match_data, is_punktspiel)
+
         sr = self._get_referee_by_role(schiedsrichter, 'SR')
         sra1 = self._get_referee_by_role(schiedsrichter, 'SRA 1')
         sra2 = self._get_referee_by_role(schiedsrichter, 'SRA 2')
@@ -150,6 +184,10 @@ class SpesenGenerator:
         spielort_adresse = spielstaette.get('adresse', '')
         spielort_typ = spielstaette.get('platz_typ', '')
         spielort_komplett = f"{spielort_name}\n{spielort_adresse}\n{spielort_typ}"
+
+        # SRA-Spesen nur eintragen wenn auch ein SRA angesetzt ist
+        sra1_spesen = sra_spesen_str if sra1.get('name') else ''
+        sra2_spesen = sra_spesen_str if sra2.get('name') else ''
 
         replacements = {
             **checkboxes,
@@ -169,9 +207,9 @@ class SpesenGenerator:
             'SRA2_NAME': sra2.get('name', ''),
             'SRA2_STRASSE': sra2.get('strasse', ''),
             'SRA2_PLZ_ORT': sra2.get('plz_ort', ''),
-            'SR_Spesen': '',
-            'SR1_Spesen': '',
-            'SR2_Spesen': '',
+            'SR_Spesen': sr_spesen_str,
+            'SR1_Spesen': sra1_spesen,
+            'SR2_Spesen': sra2_spesen,
         }
 
         self._replace_placeholders(doc, replacements)

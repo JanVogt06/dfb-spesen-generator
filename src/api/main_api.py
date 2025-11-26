@@ -28,6 +28,7 @@ from main import scrape_matches_with_session, generate_documents_in_session
 from utils.session_manager import SessionManager
 from utils.logger import setup_logger
 from utils.match_utils import generate_filename_from_match, extract_iso_date_from_anpfiff
+from generator.spesen_calculator import calculate_spesen, format_spesen
 from db.database import (
     init_database,
     create_session as db_create_session,
@@ -127,6 +128,68 @@ class SessionResponse(BaseModel):
     progress: Optional[Dict] = None
 
 
+# ===== Helper Functions =====
+
+def _add_spesen_to_match(match: dict) -> dict:
+    """
+    Fügt berechnete Spesen-Informationen zu einem Match hinzu.
+
+    Berechnet SR- und SRA-Spesen basierend auf Spielklasse und Mannschaftsart
+    und fügt sie als _spesen Objekt zum Match hinzu.
+
+    Args:
+        match: Match-Dictionary mit spiel_info und schiedsrichter
+
+    Returns:
+        Match mit hinzugefügtem _spesen Objekt
+    """
+    spiel_info = match.get('spiel_info', {})
+    schiedsrichter = match.get('schiedsrichter', [])
+
+    spielklasse = spiel_info.get('spielklasse', '').lower()
+    mannschaftsart = spiel_info.get('mannschaftsart', '')
+
+    # Prüfe ob Punktspiel (nicht Pokal, nicht Freundschaft)
+    is_punktspiel = 'pokal' not in spielklasse and 'freundschaft' not in spielklasse
+
+    # Standard: keine Spesen
+    spesen_info = {
+        'sr': None,
+        'sra': None,
+        'sr_formatted': '',
+        'sra_formatted': '',
+        'is_punktspiel': is_punktspiel,
+        'hinweis': None
+    }
+
+    if is_punktspiel:
+        sr_spesen, sra_spesen = calculate_spesen(
+            spiel_info.get('spielklasse', ''),
+            mannschaftsart
+        )
+
+        if sr_spesen is not None:
+            spesen_info['sr'] = sr_spesen
+            spesen_info['sr_formatted'] = format_spesen(sr_spesen)
+
+        if sra_spesen is not None:
+            spesen_info['sra'] = sra_spesen
+            spesen_info['sra_formatted'] = format_spesen(sra_spesen)
+
+        # Prüfe ob SRAs angesetzt sind
+        sra_count = sum(1 for sr in schiedsrichter if sr.get('rolle', '').startswith('SRA'))
+        spesen_info['sra_count'] = sra_count
+
+        # Hinweis wenn keine Spesen ermittelt werden konnten
+        if sr_spesen is None:
+            spesen_info['hinweis'] = 'Spesen konnten nicht automatisch ermittelt werden (überregionales Spiel oder unbekannte Spielklasse)'
+    else:
+        spesen_info['hinweis'] = 'Keine automatische Berechnung für Pokal-/Freundschaftsspiele'
+
+    match['_spesen'] = spesen_info
+    return match
+
+
 # ===== Generation Process =====
 
 def run_generation_process(
@@ -149,7 +212,7 @@ def run_generation_process(
     from utils.logger import setup_logger
     process_logger = setup_logger("generation_process")
 
-    # Session Manager initialisieren
+    # Session Manager EINMAL initialisieren (vor try-Block)
     sm = SessionManager()
 
     try:
@@ -350,6 +413,8 @@ async def get_all_user_matches(current_user: dict = Depends(get_current_user)):
                         match['_datum'] = datum
                         match['_created_at'] = db_session['created_at']
                         match['_filename'] = filename
+                        # Spesen hinzufügen
+                        _add_spesen_to_match(match)
                         all_matches_dict[key] = match
 
             except Exception as e:
@@ -444,11 +509,13 @@ async def get_session_matches(
         with open(data_file, 'r', encoding='utf-8') as f:
             matches_data = json.load(f)
 
-        # Füge Dateinamen zu jedem Match hinzu (mit zentraler Helper-Funktion)
+        # Füge Dateinamen und Spesen zu jedem Match hinzu
         for match in matches_data:
             filename = generate_filename_from_match(match)
             match['_filename'] = filename
             match['_session_id'] = session_id
+            # Spesen hinzufügen
+            _add_spesen_to_match(match)
 
         return matches_data
 

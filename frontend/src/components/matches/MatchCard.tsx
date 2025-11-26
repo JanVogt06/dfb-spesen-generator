@@ -2,10 +2,20 @@ import { useState } from 'react';
 import type { MatchData } from '@/lib/matches';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Calendar, ChevronDown, ChevronUp, Download, Users, MapPin } from 'lucide-react';
+import { Calendar, ChevronDown, ChevronUp, Download, Users, MapPin, Euro } from 'lucide-react';
+
+interface SpesenInfo {
+  sr: number | null;
+  sra: number | null;
+  sr_formatted: string;
+  sra_formatted: string;
+  is_punktspiel: boolean;
+  sra_count?: number;
+  hinweis: string | null;
+}
 
 interface MatchCardProps {
-  match: MatchData;
+  match: MatchData & { _spesen?: SpesenInfo };
   index: number;
   filename: string;
   onDownload: (filename: string) => void;
@@ -133,6 +143,53 @@ export function MatchCard({ match, index, filename, onDownload, isDownloading }:
     );
   };
 
+  const renderSpesen = () => {
+    const spesen = match._spesen;
+
+    if (!spesen) {
+      return null;
+    }
+
+    // Keine Anzeige wenn keine Spesen berechnet wurden und kein Hinweis vorhanden
+    if (!spesen.sr_formatted && !spesen.hinweis) {
+      return null;
+    }
+
+    // Prüfe ob SRAs angesetzt sind
+    const hasSRA = match.schiedsrichter?.some(sr => sr.rolle?.startsWith('SRA'));
+
+    return (
+      <div className="border-t pt-4">
+        <h4 className="font-medium text-gray-700 mb-2 flex items-center gap-1.5 text-sm sm:text-base">
+          <Euro className="h-4 w-4" />
+          Spesen (TFV-Spesenordnung)
+        </h4>
+        <div className="bg-gray-50 p-3 rounded-lg">
+          {spesen.sr_formatted ? (
+            <div className="grid gap-2 text-xs sm:text-sm">
+              <div className="grid grid-cols-[100px_1fr] sm:grid-cols-[120px_1fr] gap-2">
+                <span className="text-gray-600">SR:</span>
+                <span className="text-gray-900 font-medium">{spesen.sr_formatted}</span>
+              </div>
+              {spesen.sra_formatted && hasSRA && (
+                <div className="grid grid-cols-[100px_1fr] sm:grid-cols-[120px_1fr] gap-2">
+                  <span className="text-gray-600">SRA:</span>
+                  <span className="text-gray-900 font-medium">{spesen.sra_formatted}</span>
+                </div>
+              )}
+            </div>
+          ) : (
+            spesen.hinweis && (
+              <p className="text-xs sm:text-sm text-gray-600 italic">
+                {spesen.hinweis}
+              </p>
+            )
+          )}
+        </div>
+      </div>
+    );
+  };
+
   const renderSchiedsrichter = () => {
     if (!match.schiedsrichter || match.schiedsrichter.length === 0) {
       return null;
@@ -195,14 +252,33 @@ export function MatchCard({ match, index, filename, onDownload, isDownloading }:
     );
   };
 
+  // Kompakte Spesen-Anzeige im Header (nur wenn vorhanden)
+  const renderHeaderSpesen = () => {
+    const spesen = match._spesen;
+    if (!spesen?.sr_formatted) return null;
+
+    // Prüfe ob SRAs angesetzt sind
+    const hasSRA = match.schiedsrichter?.some(sr => sr.rolle?.startsWith('SRA'));
+
+    return (
+      <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full whitespace-nowrap">
+        SR: {spesen.sr_formatted}
+        {spesen.sra_formatted && hasSRA && ` | SRA: ${spesen.sra_formatted}`}
+      </span>
+    );
+  };
+
   return (
     <Card className="hover:shadow-lg transition-all duration-200 border-gray-200">
       <CardHeader className="pb-3">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
           <div className="flex-1 min-w-0">
-            <CardTitle className="text-base sm:text-lg mb-1 break-words">
-              {getMatchTitle()}
-            </CardTitle>
+            <div className="flex items-center gap-2 flex-wrap mb-1">
+              <CardTitle className="text-base sm:text-lg break-words">
+                {getMatchTitle()}
+              </CardTitle>
+              {renderHeaderSpesen()}
+            </div>
             <p className="text-xs sm:text-sm text-gray-600 flex items-center gap-1.5 break-words">
               <Calendar className="h-3.5 w-3.5 flex-shrink-0" />
               {getMatchSubtitle()}
@@ -236,6 +312,7 @@ export function MatchCard({ match, index, filename, onDownload, isDownloading }:
       {isExpanded && (
         <CardContent className="pt-0 space-y-4">
           {renderSpielInfo()}
+          {renderSpesen()}
           {renderSchiedsrichter()}
           {renderSpielstaette()}
         </CardContent>
