@@ -1,0 +1,21 @@
+services:
+  tfv-spesen:
+    build: .
+    container_name: tfv-spesen-generator
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    environment:
+      - DATABASE_URL=sqlite:///./app.db
+      - FRONTEND_DIR=/app/frontend/dist
+    volumes:
+      # Persistente Daten - werden NICHT überschrieben
+      - ./app.db:/app/app.db
+      - ./.env:/app/.env
+      - ./output:/app/output
+    networks:
+      - tfv-network
+
+networks:
+  tfv-network:
+    driver: bridge
