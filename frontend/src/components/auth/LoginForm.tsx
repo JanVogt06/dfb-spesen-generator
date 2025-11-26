@@ -16,28 +16,18 @@ export function LoginForm() {
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
-    // KRITISCH: preventDefault MUSS als allererstes kommen!
     e.preventDefault();
-    e.stopPropagation();
-
-    console.log('Form submitted - preventDefault called');
-
     setError('');
-
     setIsLoading(true);
 
     try {
-      console.log('Calling login...');
       await login(email, password);
-      console.log('Login successful, navigating...');
       navigate('/dashboard');
-    } catch (err: any) {
-      console.error('Login error:', err);
-      const errorMessage = err.response?.data?.error?.message || 'Login fehlgeschlagen';
-      console.log('Setting error message:', errorMessage);
+    } catch (err: unknown) {
+      const axiosError = err as { response?: { data?: { error?: { message?: string } } } };
+      const errorMessage = axiosError.response?.data?.error?.message || 'Login fehlgeschlagen';
       setError(errorMessage);
     } finally {
-      console.log('Setting isLoading to false');
       setIsLoading(false);
     }
   };
@@ -51,7 +41,7 @@ export function LoginForm() {
         </CardDescription>
       </CardHeader>
       <CardContent className="px-4 sm:px-6">
-        <form onSubmit={handleSubmit} className="space-y-4" action="javascript:void(0);">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email" className="text-sm sm:text-base">E-Mail</Label>
             <Input
@@ -81,10 +71,10 @@ export function LoginForm() {
           </div>
 
           {error && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+            <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
               <div className="flex items-start gap-2">
-                <AlertCircle className="h-4 w-4 text-red-600 flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-red-800 break-words">
+                <AlertCircle className="h-4 w-4 text-destructive flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-destructive break-words">
                   {error}
                 </p>
               </div>
@@ -101,9 +91,9 @@ export function LoginForm() {
         </form>
       </CardContent>
       <CardFooter className="flex justify-center px-4 sm:px-6">
-        <p className="text-sm text-gray-600 text-center">
+        <p className="text-sm text-muted-foreground text-center">
           Noch kein Account?{' '}
-          <Link to="/register" className="text-blue-600 hover:underline">
+          <Link to="/register" className="text-primary hover:underline">
             Jetzt registrieren
           </Link>
         </p>

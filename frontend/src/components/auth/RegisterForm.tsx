@@ -17,12 +17,7 @@ export function RegisterForm() {
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
-    // KRITISCH: preventDefault MUSS als allererstes kommen!
     e.preventDefault();
-    e.stopPropagation();
-
-    console.log('Form submitted - preventDefault called');
-
     setError('');
 
     if (password !== confirmPassword) {
@@ -38,17 +33,13 @@ export function RegisterForm() {
     setIsLoading(true);
 
     try {
-      console.log('Calling register...');
       await register(email, password);
-      console.log('Registration successful, navigating...');
       navigate('/dashboard');
-    } catch (err: any) {
-      console.error('Registration error:', err);
-      const errorMessage = err.response?.data?.error?.message || 'Registrierung fehlgeschlagen';
-      console.log('Setting error message:', errorMessage);
+    } catch (err: unknown) {
+      const axiosError = err as { response?: { data?: { error?: { message?: string } } } };
+      const errorMessage = axiosError.response?.data?.error?.message || 'Registrierung fehlgeschlagen';
       setError(errorMessage);
     } finally {
-      console.log('Setting isLoading to false');
       setIsLoading(false);
     }
   };
@@ -62,7 +53,7 @@ export function RegisterForm() {
         </CardDescription>
       </CardHeader>
       <CardContent className="px-4 sm:px-6">
-        <form onSubmit={handleSubmit} className="space-y-4" action="javascript:void(0);">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email" className="text-sm sm:text-base">E-Mail</Label>
             <Input
@@ -89,7 +80,7 @@ export function RegisterForm() {
               className="text-sm sm:text-base"
               autoComplete="new-password"
             />
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-muted-foreground">
               Das Passwort muss mindestens 8 Zeichen lang sein
             </p>
           </div>
@@ -109,10 +100,10 @@ export function RegisterForm() {
           </div>
 
           {error && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+            <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
               <div className="flex items-start gap-2">
-                <AlertCircle className="h-4 w-4 text-red-600 flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-red-800 break-words">
+                <AlertCircle className="h-4 w-4 text-destructive flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-destructive break-words">
                   {error}
                 </p>
               </div>
@@ -129,9 +120,9 @@ export function RegisterForm() {
         </form>
       </CardContent>
       <CardFooter className="flex justify-center px-4 sm:px-6">
-        <p className="text-sm text-gray-600 text-center">
+        <p className="text-sm text-muted-foreground text-center">
           Bereits ein Account?{' '}
-          <Link to="/login" className="text-blue-600 hover:underline">
+          <Link to="/login" className="text-primary hover:underline">
             Zum Login
           </Link>
         </p>

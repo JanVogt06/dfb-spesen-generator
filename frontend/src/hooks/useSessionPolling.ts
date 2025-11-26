@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { Session } from '@/lib/sessions';
-import { getSession } from '@/lib/sessions';
+import { getSession, isSessionRunning } from '@/lib/sessions';
 
 export function useSessionPolling(sessionId: string | null, enabled: boolean = true) {
   const [session, setSession] = useState<Session | null>(null);
@@ -17,8 +17,9 @@ export function useSessionPolling(sessionId: string | null, enabled: boolean = t
         const data = await getSession(sessionId);
         setSession(data);
         setError(null);
-      } catch (err: any) {
-        setError(err.message);
+      } catch (err: unknown) {
+        const error = err as Error;
+        setError(error.message);
       }
     };
 
@@ -30,12 +31,13 @@ export function useSessionPolling(sessionId: string | null, enabled: boolean = t
         const data = await getSession(sessionId);
         setSession(data);
 
-        // Stoppe Polling wenn fertig
-        if (data.status === 'completed' || data.status === 'failed') {
+        // Stoppe Polling wenn fertig (nutzt zentrale Helper-Funktion)
+        if (!isSessionRunning(data)) {
           clearInterval(interval);
         }
-      } catch (err: any) {
-        setError(err.message);
+      } catch (err: unknown) {
+        const error = err as Error;
+        setError(error.message);
       }
     }, 2000); // Alle 2 Sekunden
 

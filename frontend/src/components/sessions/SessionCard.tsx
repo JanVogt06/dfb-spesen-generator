@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { Session } from '@/lib/sessions';
-import { getDownloadAllUrl } from '@/lib/sessions';
+import { getDownloadAllUrl, isSessionRunning, isSessionCompleted, isSessionFailed } from '@/lib/sessions';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { SessionProgress } from './SessionProgress';
@@ -17,6 +17,8 @@ import {
   Eye,
   Download
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import type { SessionStatus } from '@/lib/sessionUtils';
 
 interface SessionCardProps {
   initialSession: Session;
@@ -25,16 +27,14 @@ interface SessionCardProps {
 export function SessionCard({ initialSession }: SessionCardProps) {
   const navigate = useNavigate();
   const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
 
-  // Polling nur für laufende Sessions
-  const isRunning = initialSession.status === 'in_progress'
-    || initialSession.status === 'scraping'
-    || initialSession.status === 'generating'
-    || initialSession.status === 'pending';
+  // Polling nur für laufende Sessions (nutzt zentrale Helper-Funktion)
+  const running = isSessionRunning(initialSession);
 
   const { session } = useSessionPolling(
     initialSession.session_id,
-    isRunning
+    running
   );
 
   // Nutze gepolte Session oder Initial-Session
@@ -42,6 +42,7 @@ export function SessionCard({ initialSession }: SessionCardProps) {
 
   const handleDownload = async () => {
     setIsDownloading(true);
+    setDownloadError(null);
     try {
       const response = await api.get(getDownloadAllUrl(currentSession.session_id), {
         responseType: 'blob',
@@ -59,42 +60,42 @@ export function SessionCard({ initialSession }: SessionCardProps) {
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Download-Fehler:', error);
-      alert('Fehler beim Download. Bitte versuche es erneut.');
+      setDownloadError('Fehler beim Download. Bitte versuche es erneut.');
     } finally {
       setIsDownloading(false);
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    const badges: Record<string, { text: string; className: string; icon: any }> = {
+  const getStatusBadge = (status: SessionStatus) => {
+    const badges: Record<SessionStatus, { text: string; className: string; icon: LucideIcon }> = {
       pending: {
         text: 'Wartend',
-        className: 'bg-gray-100 text-gray-800 border border-gray-200',
+        className: 'bg-muted text-muted-foreground border border-border',
         icon: Clock
       },
       in_progress: {
         text: 'Läuft',
-        className: 'bg-blue-100 text-blue-800 border border-blue-200',
+        className: 'bg-primary/10 text-primary border border-primary/20',
         icon: PlayCircle
       },
       scraping: {
         text: 'Scraping',
-        className: 'bg-yellow-100 text-yellow-800 border border-yellow-200',
+        className: 'bg-accent text-accent-foreground border border-border',
         icon: Database
       },
       generating: {
         text: 'Generierung',
-        className: 'bg-purple-100 text-purple-800 border border-purple-200',
+        className: 'bg-secondary text-secondary-foreground border border-border',
         icon: FileText
       },
       completed: {
         text: 'Fertig',
-        className: 'bg-green-100 text-green-800 border border-green-200',
+        className: 'bg-green-100 text-green-800 border border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800',
         icon: CheckCircle2
       },
       failed: {
         text: 'Fehler',
-        className: 'bg-red-100 text-red-800 border border-red-200',
+        className: 'bg-destructive/10 text-destructive border border-destructive/20',
         icon: XCircle
       },
     };
@@ -127,7 +128,7 @@ export function SessionCard({ initialSession }: SessionCardProps) {
   };
 
   return (
-    <Card className="hover:shadow-lg transition-all duration-200 border-gray-200 hover:border-primary/30">
+    <Card className="hover:shadow-lg transition-all duration-200 border-border hover:border-primary/30">
       <CardHeader>
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
           <div className="flex-1 min-w-0">
@@ -145,15 +146,21 @@ export function SessionCard({ initialSession }: SessionCardProps) {
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Progress-Anzeige für laufende Sessions */}
-        {isRunning && <SessionProgress session={currentSession} />}
+        {isSessionRunning(currentSession) && <SessionProgress session={currentSession} />}
 
         {/* Fertig: Download-Buttons */}
-        {currentSession.status === 'completed' && (
+        {isSessionCompleted(currentSession) && (
           <div className="space-y-2">
-            <p className="text-sm text-gray-600 flex items-center gap-1.5">
+            <p className="text-sm text-muted-foreground flex items-center gap-1.5">
               <FileText className="h-4 w-4 flex-shrink-0" />
               <span>{getDocxCount()} Spesenabrechnungen generiert</span>
             </p>
+            {downloadError && (
+              <div className="text-sm text-destructive flex items-start gap-2 p-3 bg-destructive/10 rounded-lg border border-destructive/20">
+                <XCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                <span>{downloadError}</span>
+              </div>
+            )}
             <div className="flex flex-col sm:flex-row gap-2">
               <Button
                 className="flex-1 w-full sm:w-auto"
@@ -176,8 +183,8 @@ export function SessionCard({ initialSession }: SessionCardProps) {
         )}
 
         {/* Fehler */}
-        {currentSession.status === 'failed' && (
-          <div className="text-sm text-red-600 flex items-start gap-2 p-3 bg-red-50 rounded-lg border border-red-200">
+        {isSessionFailed(currentSession) && (
+          <div className="text-sm text-destructive flex items-start gap-2 p-3 bg-destructive/10 rounded-lg border border-destructive/20">
             <XCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
             <span>Bei der Generierung ist ein Fehler aufgetreten.</span>
           </div>

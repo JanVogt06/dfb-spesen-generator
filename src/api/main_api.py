@@ -105,6 +105,15 @@ if FRONTEND_DIR.exists():
 else:
     logger.warning(f"Frontend-Verzeichnis nicht gefunden: {FRONTEND_DIR}")
 
+# Nach dem /assets Mount hinzufügen:
+@app.get("/appicon.png")
+async def serve_favicon():
+    """Serve App Icon"""
+    icon_path = FRONTEND_DIR / "appicon.png"
+    if icon_path.exists():
+        return FileResponse(str(icon_path), media_type="image/png")
+    raise HTTPException(status_code=404, detail="Icon not found")
+
 # Session Manager global
 session_manager = SessionManager()
 

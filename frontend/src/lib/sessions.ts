@@ -1,5 +1,6 @@
 import { api } from './api';
 import type { MatchData } from './matches';
+import type { SessionStatus } from './sessionUtils';
 
 // Types
 export interface SessionFile {
@@ -17,7 +18,7 @@ export interface SessionProgress {
 
 export interface Session {
   session_id: string;
-  status: string;
+  status: SessionStatus;
   files: SessionFile[];
   download_all_url: string;
   created_at: string;
@@ -26,6 +27,9 @@ export interface Session {
 
 // Re-export MatchData for convenience
 export type { MatchData } from './matches';
+
+// Re-export session utils
+export { isSessionRunning, isSessionCompleted, isSessionFailed } from './sessionUtils';
 
 // API Functions
 export async function startGeneration(): Promise<Session> {

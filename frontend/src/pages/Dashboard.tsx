@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { SessionList } from '@/components/sessions/SessionList';
 import { MatchList } from '@/components/matches/MatchList';
-import { getUserSessions, startGeneration, type Session } from '@/lib/sessions';
+import { getUserSessions, startGeneration, isSessionRunning, type Session } from '@/lib/sessions';
 import { getAllMatches, type MatchData } from '@/lib/matches';
 import { logout } from '@/lib/auth';
 import { Settings, LogOut, Zap, AlertCircle, Calendar, FolderClock, Loader2 } from 'lucide-react';
@@ -26,12 +26,8 @@ export function DashboardPage() {
   // Poll NUR Sessions (nicht Matches) wenn welche laufen
   useEffect(() => {
     const checkRunningSessions = async () => {
-      const running = sessions.some(s =>
-        s.status === 'in_progress' ||
-        s.status === 'scraping' ||
-        s.status === 'generating' ||
-        s.status === 'pending'
-      );
+      // Nutzt zentrale Helper-Funktion
+      const running = sessions.some(isSessionRunning);
 
       if (running) {
         hadRunningSessions.current = true;
@@ -68,8 +64,9 @@ export function DashboardPage() {
       ]);
       setMatches(matchesData);
       setSessions(sessionsData);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      const error = err as Error;
+      setError(error.message);
     } finally {
       setIsLoading(false);
     }
@@ -83,11 +80,12 @@ export function DashboardPage() {
       const newSession = await startGeneration();
       setSessions([newSession, ...sessions]);
       // Matches werden automatisch neu geladen wenn Session completed ist (via Polling)
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.error?.message || err.message;
+    } catch (err: unknown) {
+      const axiosError = err as { response?: { data?: { error?: { message?: string; code?: string } } }; message?: string };
+      const errorMessage = axiosError.response?.data?.error?.message || axiosError.message || 'Unbekannter Fehler';
       setError(errorMessage);
 
-      if (err.response?.data?.error?.code === 'CREDENTIALS_MISSING') {
+      if (axiosError.response?.data?.error?.code === 'CREDENTIALS_MISSING') {
         setTimeout(() => navigate('/settings'), 2000);
       }
     } finally {
@@ -95,17 +93,12 @@ export function DashboardPage() {
     }
   };
 
-  // Finde laufende Sessions
-  const runningSessions = sessions.filter(s =>
-    s.status === 'in_progress' ||
-    s.status === 'scraping' ||
-    s.status === 'generating' ||
-    s.status === 'pending'
-  );
+  // Finde laufende Sessions (nutzt zentrale Helper-Funktion)
+  const runningSessions = sessions.filter(isSessionRunning);
   const hasRunningSessions = runningSessions.length > 0;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+    <div className="min-h-screen bg-gradient-to-br from-background to-muted">
       <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
         {/* Header */}
         <div className="bg-primary rounded-xl sm:rounded-2xl shadow-lg mb-6 sm:mb-8 p-4 sm:p-6 lg:p-8 text-primary-foreground">
@@ -136,10 +129,10 @@ export function DashboardPage() {
 
         {/* Error Message */}
         {error && (
-          <div className="mb-6 p-3 sm:p-4 bg-red-50 border border-red-200 rounded-lg shadow-sm animate-in slide-in-from-top-2 duration-300">
+          <div className="mb-6 p-3 sm:p-4 bg-destructive/10 border border-destructive/20 rounded-lg shadow-sm animate-in slide-in-from-top-2 duration-300">
             <div className="flex items-start gap-2">
-              <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
-              <p className="text-sm text-red-800 break-words">{error}</p>
+              <AlertCircle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-destructive break-words">{error}</p>
             </div>
           </div>
         )}
@@ -189,34 +182,34 @@ export function DashboardPage() {
 
         {/* Running Sessions Progress - Sichtbar in BEIDEN Tabs */}
         {hasRunningSessions && (
-          <Card className="mb-6 border-2 border-blue-300 bg-gradient-to-r from-blue-50 to-cyan-50 shadow-md">
+          <Card className="mb-6 border-2 border-primary/30 bg-gradient-to-r from-primary/5 to-accent/5 shadow-md">
             <CardContent className="p-4 sm:p-5">
               <div className="flex items-start gap-4">
                 <div className="flex-shrink-0">
-                  <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
-                    <Loader2 className="h-5 w-5 text-white animate-spin" />
+                  <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
+                    <Loader2 className="h-5 w-5 text-primary-foreground animate-spin" />
                   </div>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-base font-semibold text-gray-900 mb-1">
+                  <h3 className="text-base font-semibold text-foreground mb-1">
                     {runningSessions.length === 1
                       ? 'Session wird gerade verarbeitet'
                       : `${runningSessions.length} Sessions werden gerade verarbeitet`}
                   </h3>
-                  <p className="text-sm text-gray-600 mb-3">
+                  <p className="text-sm text-muted-foreground mb-3">
                     Das Scraping läuft im Hintergrund. Du wirst benachrichtigt, wenn es fertig ist.
                   </p>
                   {runningSessions.slice(0, 2).map((session) => (
                     <div key={session.session_id} className="space-y-1.5 mb-3 last:mb-0">
-                      <div className="flex items-center justify-between text-xs text-gray-700">
+                      <div className="flex items-center justify-between text-xs text-foreground">
                         <span className="font-medium">{session.progress?.step || 'Wird verarbeitet...'}</span>
-                        <span className="font-semibold text-blue-600">
+                        <span className="font-semibold text-primary">
                           {session.progress?.current || 0}/{session.progress?.total || 0} Spiele
                         </span>
                       </div>
-                      <div className="h-2.5 bg-white rounded-full overflow-hidden shadow-inner">
+                      <div className="h-2.5 bg-background rounded-full overflow-hidden shadow-inner">
                         <div
-                          className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full transition-all duration-500 ease-out"
+                          className="h-full bg-gradient-to-r from-primary to-primary/70 rounded-full transition-all duration-500 ease-out"
                           style={{
                             width: session.progress && session.progress.total > 0
                               ? `${(session.progress.current / session.progress.total) * 100}%`
@@ -227,8 +220,8 @@ export function DashboardPage() {
                     </div>
                   ))}
                   {runningSessions.length > 2 && (
-                    <p className="text-xs text-gray-500 mt-2">
-                      + {runningSessions.length - 2} weitere Session{runningSessions.length > 2 ? 's' : ''}
+                    <p className="text-xs text-muted-foreground mt-2">
+                      + {runningSessions.length - 2} weitere Session{runningSessions.length > 3 ? 's' : ''}
                     </p>
                   )}
                 </div>
@@ -242,20 +235,20 @@ export function DashboardPage() {
           {isLoading ? (
             <div className="text-center py-12">
               <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-              <p className="text-gray-600 mt-4">Lade Daten...</p>
+              <p className="text-muted-foreground mt-4">Lade Daten...</p>
             </div>
           ) : (
             <>
               {activeTab === 'matches' ? (
                 <div>
-                  <h2 className="text-xl sm:text-2xl font-semibold mb-4 text-gray-800">
+                  <h2 className="text-xl sm:text-2xl font-semibold mb-4 text-foreground">
                     Alle Spiele
                   </h2>
                   <MatchList matches={matches} />
                 </div>
               ) : (
                 <div>
-                  <h2 className="text-xl sm:text-2xl font-semibold mb-4 text-gray-800">
+                  <h2 className="text-xl sm:text-2xl font-semibold mb-4 text-foreground">
                     Deine Sessions
                   </h2>
                   <SessionList sessions={sessions} />
