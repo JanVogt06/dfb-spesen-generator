@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { SessionList } from '@/components/sessions/SessionList';
 import { MatchList } from '@/components/matches/MatchList';
-import { getUserSessions, startGeneration, isSessionRunning, type Session } from '@/lib/sessions';
+import { getUserSessions, startGeneration, isSessionRunning, getSession, type Session } from '@/lib/sessions';
 import { getAllMatches, type MatchData } from '@/lib/matches';
 import { logout } from '@/lib/auth';
 import { Settings, LogOut, Zap, AlertCircle, Calendar, FolderClock, Loader2 } from 'lucide-react';
@@ -23,34 +23,55 @@ export function DashboardPage() {
     loadData();
   }, []);
 
-  // Poll NUR Sessions (nicht Matches) wenn welche laufen
+  // Zentrales Polling für laufende Sessions
+  // Aktualisiert nur die laufenden Sessions, nicht alle
   useEffect(() => {
-    const checkRunningSessions = async () => {
-      // Nutzt zentrale Helper-Funktion
-      const running = sessions.some(isSessionRunning);
+    const pollRunningSessions = async () => {
+      const runningSessions = sessions.filter(isSessionRunning);
 
-      if (running) {
-        hadRunningSessions.current = true;
-        // Lade NUR Sessions, nicht Matches
-        try {
-          const sessionsData = await getUserSessions();
-          setSessions(sessionsData);
-        } catch (err) {
-          console.error('Fehler beim Aktualisieren der Sessions:', err);
+      if (runningSessions.length === 0) {
+        // Keine laufenden Sessions mehr
+        if (hadRunningSessions.current) {
+          // Sessions waren am Laufen, jetzt fertig - lade Matches neu
+          hadRunningSessions.current = false;
+          try {
+            const updatedMatches = await getAllMatches();
+            setMatches(updatedMatches);
+          } catch (err) {
+            console.error('Fehler beim Neuladen der Matches:', err);
+          }
         }
-      } else if (hadRunningSessions.current) {
-        // Sessions waren am Laufen, jetzt aber nicht mehr - lade Matches
-        hadRunningSessions.current = false;
-        try {
-          const updatedMatches = await getAllMatches();
-          setMatches(updatedMatches);
-        } catch (err) {
-          console.error('Fehler beim Neuladen der Matches:', err);
-        }
+        return;
       }
+
+      hadRunningSessions.current = true;
+
+      // Alle laufenden Sessions parallel abfragen
+      const updates = await Promise.all(
+        runningSessions.map(async (session) => {
+          try {
+            return await getSession(session.session_id);
+          } catch (error) {
+            console.error(`Fehler beim Polling von Session ${session.session_id}:`, error);
+            return null;
+          }
+        })
+      );
+
+      // State aktualisieren mit neuen Daten
+      setSessions((prevSessions) => {
+        return prevSessions.map((session) => {
+          const update = updates.find(
+            (u) => u && u.session_id === session.session_id
+          );
+          return update || session;
+        });
+      });
     };
 
-    const interval = setInterval(checkRunningSessions, 3000);
+    // Polling alle 2 Sekunden
+    const interval = setInterval(pollRunningSessions, 2000);
+
     return () => clearInterval(interval);
   }, [sessions]);
 
@@ -202,20 +223,27 @@ export function DashboardPage() {
                   {runningSessions.slice(0, 2).map((session) => (
                     <div key={session.session_id} className="space-y-1.5 mb-3 last:mb-0">
                       <div className="flex items-center justify-between text-xs text-foreground">
-                        <span className="font-medium">{session.progress?.step || 'Wird verarbeitet...'}</span>
+                        <span className="font-medium">
+                          {session.progress?.step || 'Initialisierung...'}
+                        </span>
                         <span className="font-semibold text-primary">
-                          {session.progress?.current || 0}/{session.progress?.total || 0} Spiele
+                          {session.progress
+                            ? `${session.progress.current}/${session.progress.total} Spiele`
+                            : 'Starte...'
+                          }
                         </span>
                       </div>
                       <div className="h-2.5 bg-background rounded-full overflow-hidden shadow-inner">
                         <div
-                          className="h-full bg-gradient-to-r from-primary to-primary/70 rounded-full transition-all duration-500 ease-out"
+                          className={`h-full bg-gradient-to-r from-primary to-primary/70 rounded-full transition-all duration-500 ease-out ${
+                            !session.progress ? 'animate-pulse' : ''
+                          }`}
                           style={{
                             width: session.progress && session.progress.total > 0
                               ? `${(session.progress.current / session.progress.total) * 100}%`
                               : '5%'
                           }}
-                        ></div>
+                        />
                       </div>
                     </div>
                   ))}

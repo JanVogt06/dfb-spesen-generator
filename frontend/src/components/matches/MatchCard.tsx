@@ -35,51 +35,72 @@ export function MatchCard({ match, index, filename, onDownload, isDownloading }:
   const getMatchSubtitle = () => {
     if (match.spiel_info?.anpfiff) {
       try {
-        // Versuche verschiedene Datums-Formate zu parsen
-        let date: Date;
+        const anpfiff = match.spiel_info.anpfiff;
+        let date: Date | null = null;
 
-        // ISO 8601 Format (z.B. "2025-11-20T15:00:00")
-        if (match.spiel_info.anpfiff.includes('T') || match.spiel_info.anpfiff.includes('-')) {
-          date = new Date(match.spiel_info.anpfiff);
+        // Format: "Samstag · 22.11.2025 · 11:00 Uhr" (DFBnet Format)
+        if (anpfiff.includes('·')) {
+          const parts = anpfiff.split('·').map(p => p.trim());
+          // parts[0] = "Samstag", parts[1] = "22.11.2025", parts[2] = "11:00 Uhr"
+          if (parts.length >= 3) {
+            const datePart = parts[1]; // "22.11.2025"
+            const timePart = parts[2].replace('Uhr', '').trim(); // "11:00"
+            const [day, month, year] = datePart.split('.');
+            if (day && month && year) {
+              date = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${timePart}`);
+            }
+          } else if (parts.length === 2) {
+            // Nur Datum ohne Zeit: "Samstag · 22.11.2025"
+            const datePart = parts[1];
+            const [day, month, year] = datePart.split('.');
+            if (day && month && year) {
+              date = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`);
+            }
+          }
         }
-        // Deutsches Format (z.B. "20.11.2025 15:00")
-        else if (match.spiel_info.anpfiff.includes('.')) {
-          const parts = match.spiel_info.anpfiff.split(' ');
+        // ISO 8601 Format (z.B. "2025-11-20T15:00:00")
+        else if (anpfiff.includes('T') || (anpfiff.includes('-') && !anpfiff.includes('.'))) {
+          date = new Date(anpfiff);
+        }
+        // Deutsches Format ohne Wochentag (z.B. "20.11.2025 15:00")
+        else if (anpfiff.includes('.')) {
+          const parts = anpfiff.split(' ');
           if (parts.length >= 2) {
             const [day, month, year] = parts[0].split('.');
-            const time = parts[1] || '00:00';
-            date = new Date(`${year}-${month}-${day}T${time}`);
+            const time = parts[1].replace('Uhr', '').trim() || '00:00';
+            date = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${time}`);
           } else {
             // Nur Datum ohne Uhrzeit
             const [day, month, year] = parts[0].split('.');
-            date = new Date(`${year}-${month}-${day}`);
+            date = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`);
           }
         }
         // Falls bereits ein Timestamp
-        else if (!isNaN(Number(match.spiel_info.anpfiff))) {
-          date = new Date(Number(match.spiel_info.anpfiff));
+        else if (!isNaN(Number(anpfiff))) {
+          date = new Date(Number(anpfiff));
         }
         else {
           // Fallback: Versuche direktes Parsen
-          date = new Date(match.spiel_info.anpfiff);
+          date = new Date(anpfiff);
         }
 
         // Prüfe, ob das Datum gültig ist
-        if (isNaN(date.getTime())) {
-          console.warn('Invalid date format:', match.spiel_info.anpfiff);
-          return match.spiel_info.anpfiff; // Gib den Original-String zurück
+        if (!date || isNaN(date.getTime())) {
+          // Kein Fehler loggen, einfach Original zurückgeben
+          return anpfiff;
         }
 
         return date.toLocaleString('de-DE', {
+          weekday: 'short',
           day: '2-digit',
           month: '2-digit',
           year: 'numeric',
           hour: '2-digit',
           minute: '2-digit',
         }) + ' Uhr';
-      } catch (error) {
-        console.error('Error parsing date:', error, match.spiel_info.anpfiff);
-        return match.spiel_info.anpfiff; // Gib den Original-String zurück
+      } catch {
+        // Bei Fehlern einfach den Original-String zurückgeben
+        return match.spiel_info.anpfiff;
       }
     }
     return 'Keine Zeitangabe';
@@ -101,9 +122,9 @@ export function MatchCard({ match, index, filename, onDownload, isDownloading }:
       strasse: 'Straße',
       plz_ort: 'PLZ/Ort',
       adresse: 'Adresse',
-      platz_typ: 'Platztyp',
+      platz_typ: 'Platzart',
     };
-    return fieldNames[key] || key;
+    return fieldNames[key] || key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ');
   };
 
   const renderSpielInfo = () => {
@@ -111,23 +132,34 @@ export function MatchCard({ match, index, filename, onDownload, isDownloading }:
       return null;
     }
 
+    // Felder die wir immer anzeigen wollen (auch wenn leer für Konsistenz)
+    const priorityFields = ['spielklasse', 'staffel', 'mannschaftsart', 'spieltag'];
     const fieldsToShow = Object.entries(match.spiel_info)
       .filter(([key, value]) =>
         value &&
-        key !== 'heim_team' &&
-        key !== 'gast_team' &&
-        key !== 'anpfiff'
+        !['heim_team', 'gast_team', 'anpfiff'].includes(key) &&
+        !key.startsWith('_')
       );
 
     if (fieldsToShow.length === 0) {
       return null;
     }
 
+    // Sortiere Felder: Prioritäts-Felder zuerst
+    fieldsToShow.sort((a, b) => {
+      const aIndex = priorityFields.indexOf(a[0]);
+      const bIndex = priorityFields.indexOf(b[0]);
+      if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
+      if (aIndex !== -1) return -1;
+      if (bIndex !== -1) return 1;
+      return 0;
+    });
+
     return (
-      <div className="border-t pt-4">
+      <div>
         <h4 className="font-medium text-gray-700 mb-2 flex items-center gap-1.5 text-sm sm:text-base">
           <Calendar className="h-4 w-4" />
-          Spielinformationen
+          Spieldetails
         </h4>
         <div className="bg-gray-50 p-3 rounded-lg">
           <div className="grid gap-2 text-xs sm:text-sm">

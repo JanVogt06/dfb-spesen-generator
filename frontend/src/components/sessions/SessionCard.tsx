@@ -5,7 +5,6 @@ import { getDownloadAllUrl, isSessionRunning, isSessionCompleted, isSessionFaile
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { SessionProgress } from './SessionProgress';
-import { useSessionPolling } from '@/hooks/useSessionPolling';
 import { api } from '@/lib/api';
 import {
   Clock,
@@ -21,39 +20,30 @@ import type { LucideIcon } from 'lucide-react';
 import type { SessionStatus } from '@/lib/sessionUtils';
 
 interface SessionCardProps {
-  initialSession: Session;
+  session: Session;  // GEÄNDERT: Nicht mehr "initialSession", sondern "session" - wird von Parent aktualisiert
 }
 
-export function SessionCard({ initialSession }: SessionCardProps) {
+export function SessionCard({ session }: SessionCardProps) {
   const navigate = useNavigate();
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
 
-  // Polling nur für laufende Sessions (nutzt zentrale Helper-Funktion)
-  const running = isSessionRunning(initialSession);
-
-  const { session } = useSessionPolling(
-    initialSession.session_id,
-    running
-  );
-
-  // Nutze gepolte Session oder Initial-Session
-  const currentSession = session || initialSession;
+  // ENTFERNT: Kein eigenes Polling mehr - Parent (Dashboard) macht das zentral
+  // const { session } = useSessionPolling(...)
 
   const handleDownload = async () => {
     setIsDownloading(true);
     setDownloadError(null);
     try {
-      const response = await api.get(getDownloadAllUrl(currentSession.session_id), {
+      const response = await api.get(getDownloadAllUrl(session.session_id), {
         responseType: 'blob',
       });
 
-      // Erstelle einen Download-Link
       const blob = new Blob([response.data], { type: 'application/zip' });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `spesen_${currentSession.session_id}.zip`;
+      link.download = `spesen_${session.session_id}.zip`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -124,7 +114,7 @@ export function SessionCard({ initialSession }: SessionCardProps) {
   };
 
   const getDocxCount = () => {
-    return currentSession.files.filter(file => file.name.toLowerCase().endsWith('.docx')).length;
+    return session.files.filter(file => file.name.toLowerCase().endsWith('.docx')).length;
   };
 
   return (
@@ -133,23 +123,23 @@ export function SessionCard({ initialSession }: SessionCardProps) {
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
           <div className="flex-1 min-w-0">
             <CardTitle className="text-base sm:text-lg break-words">
-              {formatSessionTitle(currentSession.created_at)}
+              {formatSessionTitle(session.created_at)}
             </CardTitle>
             <CardDescription className="text-xs mt-1 break-all">
-              Session-ID: {currentSession.session_id}
+              Session-ID: {session.session_id}
             </CardDescription>
           </div>
           <div className="self-start">
-            {getStatusBadge(currentSession.status)}
+            {getStatusBadge(session.status)}
           </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Progress-Anzeige für laufende Sessions */}
-        {isSessionRunning(currentSession) && <SessionProgress session={currentSession} />}
+        {isSessionRunning(session) && <SessionProgress session={session} />}
 
         {/* Fertig: Download-Buttons */}
-        {isSessionCompleted(currentSession) && (
+        {isSessionCompleted(session) && (
           <div className="space-y-2">
             <p className="text-sm text-muted-foreground flex items-center gap-1.5">
               <FileText className="h-4 w-4 flex-shrink-0" />
@@ -164,7 +154,7 @@ export function SessionCard({ initialSession }: SessionCardProps) {
             <div className="flex flex-col sm:flex-row gap-2">
               <Button
                 className="flex-1 w-full sm:w-auto"
-                onClick={() => navigate(`/session/${currentSession.session_id}`)}
+                onClick={() => navigate(`/session/${session.session_id}`)}
                 variant="outline"
               >
                 <Eye className="mr-2 h-4 w-4" />
@@ -183,7 +173,7 @@ export function SessionCard({ initialSession }: SessionCardProps) {
         )}
 
         {/* Fehler */}
-        {isSessionFailed(currentSession) && (
+        {isSessionFailed(session) && (
           <div className="text-sm text-destructive flex items-start gap-2 p-3 bg-destructive/10 rounded-lg border border-destructive/20">
             <XCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
             <span>Bei der Generierung ist ein Fehler aufgetreten.</span>

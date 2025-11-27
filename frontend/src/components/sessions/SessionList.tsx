@@ -24,7 +24,8 @@ export function SessionList({ sessions }: SessionListProps) {
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       {sessions.map((session) => (
-        <SessionCard key={session.session_id} initialSession={session} />
+        // GEÄNDERT: prop heißt jetzt "session" statt "initialSession"
+        <SessionCard key={session.session_id} session={session} />
       ))}
     </div>
   );
