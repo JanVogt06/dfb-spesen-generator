@@ -89,7 +89,10 @@ app.add_exception_handler(Exception, generic_exception_handler)
 # CORS Middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "https://spesen-generator.jan-vogt.dev",
+        "http://localhost:5173",  # Für lokale Entwicklung
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
