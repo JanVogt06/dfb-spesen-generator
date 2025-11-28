@@ -10,7 +10,8 @@ from db.database import (
     get_user_by_email,
     get_user_by_id,
     update_dfb_credentials,
-    get_dfb_credentials
+    get_dfb_credentials,
+    update_user_password
 )
 from core.security import hash_password, verify_password, create_access_token, decode_access_token
 from core.encryption import encrypt_credential, decrypt_credential
@@ -60,6 +61,17 @@ class DFBCredentialsRequest(BaseModel):
 
 class DFBCredentialsResponse(BaseModel):
     """DFB-Credentials Antwort"""
+    success: bool
+    message: str
+
+class ChangePasswordRequest(BaseModel):
+    """Passwort-Ändern-Anfrage"""
+    current_password: str
+    new_password: str
+
+
+class ChangePasswordResponse(BaseModel):
+    """Passwort-Ändern-Antwort"""
     success: bool
     message: str
 
@@ -216,3 +228,44 @@ async def check_dfb_credentials(current_user: dict = Depends(get_current_user)):
         "has_credentials": dfb_creds is not None,
         "message": "DFB-Credentials gespeichert" if dfb_creds else "Keine DFB-Credentials gespeichert"
     }
+
+@router.post("/change-password", response_model=ChangePasswordResponse)
+async def change_password(
+        request: ChangePasswordRequest,
+        current_user: dict = Depends(get_current_user)
+):
+    """
+    Ändert das Passwort des eingeloggten Users.
+
+    - Prüft ob aktuelles Passwort korrekt ist
+    - Validiert neues Passwort (Mindestlänge)
+    - Hasht und speichert neues Passwort
+    """
+    user_id = current_user['id']
+
+    # Hole User mit Passwort-Hash aus DB
+    user = get_user_by_id(user_id)
+    if not user:
+        raise AuthenticationError("User nicht gefunden")
+
+    # Prüfe aktuelles Passwort
+    if not verify_password(request.current_password, user['password_hash']):
+        raise AuthenticationError("Aktuelles Passwort ist falsch")
+
+    # Validiere neues Passwort
+    if len(request.new_password) < 8:
+        raise ValidationError("Neues Passwort muss mindestens 8 Zeichen lang sein")
+
+    if request.current_password == request.new_password:
+        raise ValidationError("Neues Passwort muss sich vom aktuellen unterscheiden")
+
+    # Hash neues Passwort
+    new_password_hash = hash_password(request.new_password)
+
+    # Update in DB
+    update_user_password(user_id, new_password_hash)
+
+    return ChangePasswordResponse(
+        success=True,
+        message="Passwort erfolgreich geändert"
+    )

@@ -197,6 +197,30 @@ def get_dfb_credentials(user_id: int) -> Optional[Dict]:
     return None
 
 
+def update_user_password(user_id: int, password_hash: str) -> bool:
+    """
+    Aktualisiert das Passwort eines Users.
+
+    Args:
+        user_id: ID des Users
+        password_hash: Neuer Passwort-Hash
+
+    Returns:
+        True wenn erfolgreich
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute(
+            "UPDATE users SET password_hash = ? WHERE id = ?",
+            (password_hash, user_id)
+        )
+        conn.commit()
+        return True
+    finally:
+        conn.close()
+
 # ===== SESSION FUNKTIONEN =====
 
 def create_session(session_id: str, user_id: int) -> int:
