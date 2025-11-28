@@ -86,7 +86,7 @@ export function LandingPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50/30 to-blue-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50/30 to-blue-50 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800">
       {/* Animated Background Pattern */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none opacity-40">
         <div className="absolute top-20 left-10 w-72 h-72 bg-emerald-400/20 rounded-full blur-3xl animate-pulse"
@@ -98,7 +98,7 @@ export function LandingPage() {
       </div>
 
       {/* Header/Navigation */}
-      <header className="relative border-b border-white/60 bg-white/70 backdrop-blur-xl sticky top-0 z-50 shadow-sm">
+      <header className="relative border-b border-white/60 dark:border-slate-700/60 bg-white/70 dark:bg-slate-900/80 backdrop-blur-xl sticky top-0 z-50 shadow-sm">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3 group cursor-pointer">
             <div className="relative">
@@ -110,7 +110,7 @@ export function LandingPage() {
               </div>
             </div>
             <div>
-              <h1 className="text-xl font-black text-slate-800 tracking-tight">TFV Spesen Generator</h1>
+              <h1 className="text-xl font-black text-slate-800 dark:text-slate-100 tracking-tight">TFV Spesen Generator</h1>
               <p className="text-xs text-emerald-600 font-medium">Für Schiedsrichter in Thüringen</p>
             </div>
           </div>
@@ -118,7 +118,7 @@ export function LandingPage() {
             <Button
               variant="ghost"
               onClick={() => navigate('/login')}
-              className="hidden sm:inline-flex hover:bg-emerald-50 text-slate-700 font-semibold"
+              className="hidden sm:inline-flex hover:bg-emerald-50 dark:hover:bg-emerald-900/30 text-slate-700 dark:text-slate-200 font-semibold"
             >
               Anmelden
             </Button>
@@ -135,7 +135,7 @@ export function LandingPage() {
       </header>
 
       {/* Hero Section */}
-      <section className="relative container mx-auto px-4 py-20 sm:py-32">
+      <section className="relative container mx-auto px-4 py-20 sm:py-16">
         <div className="max-w-5xl mx-auto text-center">
           <Badge className="mb-6 bg-gradient-to-r from-emerald-500 to-blue-600 text-white border-0 px-4 py-1.5
                          text-sm font-semibold shadow-lg">
@@ -143,7 +143,7 @@ export function LandingPage() {
             Automatisierte Spesenabrechnung
           </Badge>
 
-          <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black text-slate-900 mb-8 leading-tight">
+          <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black text-slate-900 dark:text-slate-100 mb-8 leading-tight">
             Spesenberichte in{' '}
             <span className="bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent">
               Sekunden
@@ -152,9 +152,7 @@ export function LandingPage() {
             statt Stunden
           </h1>
 
-          <p className="text-xl sm:text-2xl text-slate-600 mb-12 max-w-3xl mx-auto leading-relaxed font-medium">
-            Die professionelle Lösung für Thüringer Schiedsrichter.
-            <br />
+          <p className="text-xl sm:text-2xl text-slate-600 dark:text-slate-300 mb-12 max-w-3xl mx-auto leading-relaxed font-medium">
             <span className="text-emerald-600">Automatische Generierung</span> von Spesenberichten direkt aus deinen DFBnet-Daten.
           </p>
 
@@ -175,8 +173,8 @@ export function LandingPage() {
               variant="outline"
               onClick={() => navigate('/login')}
               className="text-lg px-10 py-7 w-full sm:w-auto font-semibold rounded-xl
-                       border-2 border-slate-300 hover:border-emerald-500 hover:bg-emerald-50
-                       text-slate-700 hover:text-emerald-700
+                       border-2 border-slate-300 hover:border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/30
+                       text-slate-700 dark:text-slate-200 hover:text-emerald-700
                        transform hover:scale-105 transition-all duration-300"
             >
               Bereits registriert? Anmelden
@@ -184,15 +182,15 @@ export function LandingPage() {
           </div>
 
           <div className="flex flex-wrap items-center justify-center gap-8 text-sm">
-            <div className="flex items-center gap-2 text-slate-600 font-medium">
+            <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300 font-medium">
               <CheckCircle2 className="w-5 h-5 text-emerald-500" />
               <span>100% Kostenlos</span>
             </div>
-            <div className="flex items-center gap-2 text-slate-600 font-medium">
+            <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300 font-medium">
               <CheckCircle2 className="w-5 h-5 text-blue-500" />
               <span>Keine Installation nötig</span>
             </div>
-            <div className="flex items-center gap-2 text-slate-600 font-medium">
+            <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300 font-medium">
               <CheckCircle2 className="w-5 h-5 text-violet-500" />
               <span>Sichere Datenverwaltung</span>
             </div>
@@ -209,10 +207,10 @@ export function LandingPage() {
                 <Sparkles className="w-3.5 h-3.5 mr-1.5 inline" />
                 Features
               </Badge>
-              <h2 className="text-4xl sm:text-5xl font-black text-slate-900 mb-4">
+              <h2 className="text-4xl sm:text-5xl font-black text-slate-900 dark:text-slate-100 mb-4">
                 Alles was du brauchst
               </h2>
-              <p className="text-xl text-slate-600 font-medium">
+              <p className="text-xl text-slate-600 dark:text-slate-300 font-medium">
                 Von der Datenerfassung bis zum fertigen Dokument - vollautomatisch
               </p>
             </div>
@@ -221,8 +219,8 @@ export function LandingPage() {
               {features.map((feature, index) => (
                 <Card
                   key={index}
-                  className="group relative overflow-hidden border-2 border-slate-200 hover:border-transparent
-                           bg-white hover:shadow-2xl transition-all duration-500 transform hover:scale-105"
+                  className="group relative overflow-hidden border-2 border-slate-200 dark:border-slate-700 hover:border-transparent
+                           bg-white dark:bg-slate-800 hover:shadow-2xl transition-all duration-500 transform hover:scale-105"
                 >
                   {/* Gradient Overlay on Hover */}
                   <div className={`absolute inset-0 bg-gradient-to-br ${feature.gradient} opacity-0 
@@ -238,12 +236,12 @@ export function LandingPage() {
                         <feature.icon className="w-7 h-7 text-white" />
                       </div>
                     </div>
-                    <CardTitle className="text-xl font-bold text-slate-800 group-hover:text-slate-900">
+                    <CardTitle className="text-xl font-bold text-slate-800 dark:text-slate-100 group-hover:text-slate-900 dark:text-slate-100">
                       {feature.title}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="relative">
-                    <CardDescription className="text-base text-slate-600 leading-relaxed">
+                    <CardDescription className="text-base text-slate-600 dark:text-slate-300 leading-relaxed">
                       {feature.description}
                     </CardDescription>
                   </CardContent>
@@ -255,7 +253,7 @@ export function LandingPage() {
       </section>
 
       {/* How it works Section */}
-      <section className="relative py-20 sm:py-32 bg-gradient-to-br from-white to-slate-50">
+      <section className="relative py-20 sm:py-32 bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-16">
@@ -263,10 +261,10 @@ export function LandingPage() {
                 <Rocket className="w-3.5 h-3.5 mr-1.5 inline" />
                 So funktioniert's
               </Badge>
-              <h2 className="text-4xl sm:text-5xl font-black text-slate-900 mb-4">
+              <h2 className="text-4xl sm:text-5xl font-black text-slate-900 dark:text-slate-100 mb-4">
                 In 4 einfachen Schritten
               </h2>
-              <p className="text-xl text-slate-600 font-medium">
+              <p className="text-xl text-slate-600 dark:text-slate-300 font-medium">
                 Von der Anmeldung bis zum fertigen Spesenbericht
               </p>
             </div>
@@ -304,7 +302,7 @@ export function LandingPage() {
                 return (
                   <div key={index}>
                     <Card className={`group relative overflow-hidden border-2 ${colors.border} hover:border-transparent
-                                   bg-white hover:shadow-2xl ${colors.glow} transition-all duration-500 
+                                   bg-white dark:bg-slate-800 hover:shadow-2xl ${colors.glow} transition-all duration-500 
                                    transform hover:scale-102`}>
                       {/* Gradient Overlay on Hover */}
                       <div className={`absolute inset-0 bg-gradient-to-br ${colors.bg} opacity-0 
@@ -325,7 +323,7 @@ export function LandingPage() {
                             <h3 className={`text-2xl font-bold mb-2 ${colors.text}`}>
                               {step.title}
                             </h3>
-                            <p className="text-slate-600 text-lg leading-relaxed">
+                            <p className="text-slate-600 dark:text-slate-300 text-lg leading-relaxed">
                               {step.description}
                             </p>
                           </div>
@@ -341,7 +339,7 @@ export function LandingPage() {
       </section>
 
       {/* FAQ Section */}
-      <section className="relative py-20 sm:py-32 bg-gradient-to-br from-slate-50 to-white">
+      <section className="relative py-20 sm:py-32 bg-gradient-to-br from-slate-50 to-white dark:from-slate-800 dark:to-slate-900">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-16">
@@ -349,18 +347,18 @@ export function LandingPage() {
                 <HelpCircle className="w-3.5 h-3.5 mr-1.5 inline" />
                 Häufige Fragen
               </Badge>
-              <h2 className="text-4xl sm:text-5xl font-black text-slate-900 mb-4">
+              <h2 className="text-4xl sm:text-5xl font-black text-slate-900 dark:text-slate-100 mb-4">
                 Fragen & Antworten
               </h2>
-              <p className="text-xl text-slate-600 font-medium">
+              <p className="text-xl text-slate-600 dark:text-slate-300 font-medium">
                 Alles was du wissen musst
               </p>
             </div>
 
             <div className="space-y-4">
-              <Card className="group hover:shadow-lg transition-all duration-300 border-2 border-slate-200 hover:border-violet-200">
+              <Card className="group hover:shadow-lg transition-all duration-300 border-2 border-slate-200 dark:border-slate-700 hover:border-violet-200">
                 <CardHeader>
-                  <CardTitle className="text-xl text-slate-800 flex items-start gap-3">
+                  <CardTitle className="text-xl text-slate-800 dark:text-slate-100 flex items-start gap-3">
                     <div className="w-6 h-6 rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center flex-shrink-0 mt-0.5">
                       <CheckCircle2 className="w-4 h-4 text-white" />
                     </div>
@@ -368,16 +366,16 @@ export function LandingPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-slate-600 leading-relaxed pl-9">
+                  <p className="text-slate-600 dark:text-slate-300 leading-relaxed pl-9">
                     Ja, der TFV Spesen Generator ist zu 100% kostenlos für alle Schiedsrichter in Thüringen.
                     Es gibt keine versteckten Kosten oder Premium-Features.
                   </p>
                 </CardContent>
               </Card>
 
-              <Card className="group hover:shadow-lg transition-all duration-300 border-2 border-slate-200 hover:border-violet-200">
+              <Card className="group hover:shadow-lg transition-all duration-300 border-2 border-slate-200 dark:border-slate-700 hover:border-violet-200">
                 <CardHeader>
-                  <CardTitle className="text-xl text-slate-800 flex items-start gap-3">
+                  <CardTitle className="text-xl text-slate-800 dark:text-slate-100 flex items-start gap-3">
                     <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center flex-shrink-0 mt-0.5">
                       <Shield className="w-4 h-4 text-white" />
                     </div>
@@ -385,7 +383,7 @@ export function LandingPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-slate-600 leading-relaxed pl-9">
+                  <p className="text-slate-600 dark:text-slate-300 leading-relaxed pl-9">
                     Deine Zugangsdaten werden mit Fernet-Verschlüsselung (symmetrische Verschlüsselung) sicher gespeichert
                     und sind nur für dich zugänglich. Dein Account-Passwort wird zusätzlich mit PBKDF2-HMAC gehashed.
                     Die Daten werden ausschließlich für die Generierung deiner Spesenberichte verwendet.
@@ -393,9 +391,9 @@ export function LandingPage() {
                 </CardContent>
               </Card>
 
-              <Card className="group hover:shadow-lg transition-all duration-300 border-2 border-slate-200 hover:border-violet-200">
+              <Card className="group hover:shadow-lg transition-all duration-300 border-2 border-slate-200 dark:border-slate-700 hover:border-violet-200">
                 <CardHeader>
-                  <CardTitle className="text-xl text-slate-800 flex items-start gap-3">
+                  <CardTitle className="text-xl text-slate-800 dark:text-slate-100 flex items-start gap-3">
                     <div className="w-6 h-6 rounded-full bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center flex-shrink-0 mt-0.5">
                       <FileText className="w-4 h-4 text-white" />
                     </div>
@@ -403,7 +401,7 @@ export function LandingPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-slate-600 leading-relaxed pl-9">
+                  <p className="text-slate-600 dark:text-slate-300 leading-relaxed pl-9">
                     Das System liest automatisch alle relevanten Spielinformationen aus: Datum und Uhrzeit, Teams, Spielklasse,
                     Spielort mit Adresse und Platztyp, sowie alle Schiedsrichter-Kontaktdaten (Name, Telefon, E-Mail, Adresse).
                     Diese Daten werden strukturiert in Word-Dokumente übertragen.
@@ -411,9 +409,9 @@ export function LandingPage() {
                 </CardContent>
               </Card>
 
-              <Card className="group hover:shadow-lg transition-all duration-300 border-2 border-slate-200 hover:border-violet-200">
+              <Card className="group hover:shadow-lg transition-all duration-300 border-2 border-slate-200 dark:border-slate-700 hover:border-violet-200">
                 <CardHeader>
-                  <CardTitle className="text-xl text-slate-800 flex items-start gap-3">
+                  <CardTitle className="text-xl text-slate-800 dark:text-slate-100 flex items-start gap-3">
                     <div className="w-6 h-6 rounded-full bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center flex-shrink-0 mt-0.5">
                       <Clock className="w-4 h-4 text-white" />
                     </div>
@@ -421,7 +419,7 @@ export function LandingPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-slate-600 leading-relaxed pl-9">
+                  <p className="text-slate-600 dark:text-slate-300 leading-relaxed pl-9">
                     Eine manuelle Session dauert je nach Anzahl der Spiele 1-6 Minuten.
                     Allerdings läuft jeden Abend um 3 Uhr automatisch ein Scraping-Job für alle Nutzer,
                     sodass deine Daten immer auf dem neuesten Stand sind und du in der Regel nicht warten musst.
@@ -429,9 +427,9 @@ export function LandingPage() {
                 </CardContent>
               </Card>
 
-              <Card className="group hover:shadow-lg transition-all duration-300 border-2 border-slate-200 hover:border-violet-200">
+              <Card className="group hover:shadow-lg transition-all duration-300 border-2 border-slate-200 dark:border-slate-700 hover:border-violet-200">
                 <CardHeader>
-                  <CardTitle className="text-xl text-slate-800 flex items-start gap-3">
+                  <CardTitle className="text-xl text-slate-800 dark:text-slate-100 flex items-start gap-3">
                     <div className="w-6 h-6 rounded-full bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center flex-shrink-0 mt-0.5">
                       <Download className="w-4 h-4 text-white" />
                     </div>
@@ -439,7 +437,7 @@ export function LandingPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-slate-600 leading-relaxed pl-9">
+                  <p className="text-slate-600 dark:text-slate-300 leading-relaxed pl-9">
                     Ja! Die generierten Word-Dokumente kannst du nach dem Download beliebig mit Microsoft Word oder anderen
                     kompatiblen Programmen bearbeiten und an deine Bedürfnisse anpassen.
                   </p>
@@ -451,14 +449,14 @@ export function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="relative py-12 border-t border-slate-200 bg-white/50 backdrop-blur-sm">
+      <footer className="relative py-12 border-t border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm">
         <div className="container mx-auto px-4">
-          <div className="text-center text-slate-600">
+          <div className="text-center text-slate-600 dark:text-slate-300">
             <div className="flex items-center justify-center gap-2 mb-4">
               <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-blue-600 rounded-lg flex items-center justify-center">
                 <FileText className="w-5 h-5 text-white" />
               </div>
-              <span className="font-bold text-slate-800">TFV Spesen Generator</span>
+              <span className="font-bold text-slate-800 dark:text-slate-100">TFV Spesen Generator</span>
             </div>
             <p className="text-sm">
               © 2025 TFV Spesen Generator. Entwickelt für Thüringer Schiedsrichter.

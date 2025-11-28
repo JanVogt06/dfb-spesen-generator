@@ -123,7 +123,7 @@ export function SessionDetailPage() {
         const badges: Record<string, { text: string; className: string; icon: any }> = {
             pending: {
                 text: 'Wartend',
-                className: 'bg-gray-100 text-gray-800 border border-gray-200',
+                className: 'bg-muted text-foreground border border-border',
                 icon: Clock
             },
             in_progress: {
@@ -167,12 +167,12 @@ export function SessionDetailPage() {
 
     if (isLoading) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 sm:p-6 lg:p-8">
+            <div className="min-h-screen bg-gradient-to-br from-background to-muted p-4 sm:p-6 lg:p-8">
                 <div className="max-w-7xl mx-auto">
                     <div className="text-center py-12">
                         <div
                             className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-                        <p className="text-gray-600 mt-4">Lade Session...</p>
+                        <p className="text-muted-foreground mt-4">Lade Session...</p>
                     </div>
                 </div>
             </div>
@@ -181,7 +181,7 @@ export function SessionDetailPage() {
 
     if (error || !currentSession) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 sm:p-6 lg:p-8">
+            <div className="min-h-screen bg-gradient-to-br from-background to-muted p-4 sm:p-6 lg:p-8">
                 <div className="max-w-7xl mx-auto">
                     <div className="mb-6 sm:mb-8">
                         <Button
@@ -206,7 +206,7 @@ export function SessionDetailPage() {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="min-h-screen bg-gradient-to-br from-background to-muted">
             <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
                 {/* Header */}
                 <div className="mb-6 sm:mb-8">
@@ -219,13 +219,13 @@ export function SessionDetailPage() {
                         Zurück zum Dashboard
                     </Button>
 
-                    <div className="bg-white rounded-xl shadow-md p-4 sm:p-6 border border-gray-200">
+                    <div className="bg-card rounded-xl shadow-md p-4 sm:p-6 border border-border">
                         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
                             <div className="flex-1 min-w-0">
-                                <h1 className="text-2xl sm:text-3xl font-bold mb-2 text-gray-800 break-words">
+                                <h1 className="text-2xl sm:text-3xl font-bold mb-2 text-foreground break-words">
                                     {formatSessionTitle(currentSession.created_at)}
                                 </h1>
-                                <p className="text-gray-600 text-xs sm:text-sm break-all">
+                                <p className="text-muted-foreground text-xs sm:text-sm break-all">
                                     Session-ID: {currentSession.session_id}
                                 </p>
                             </div>
@@ -270,11 +270,11 @@ export function SessionDetailPage() {
                             <div className="text-center py-12">
                                 <div
                                     className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                                <p className="text-gray-600 mt-4">Lade Spieldaten...</p>
+                                <p className="text-muted-foreground mt-4">Lade Spieldaten...</p>
                             </div>
                         ) : matches.length > 0 ? (
                             <div>
-                                <h2 className="text-xl sm:text-2xl font-semibold mb-4 text-gray-800 flex items-center gap-2">
+                                <h2 className="text-xl sm:text-2xl font-semibold mb-4 text-foreground flex items-center gap-2">
                                     <FileText className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600 flex-shrink-0"/>
                                     <span>Spiele ({matches.length})</span>
                                 </h2>
@@ -297,9 +297,9 @@ export function SessionDetailPage() {
                                 </div>
                             </div>
                         ) : (
-                            <div className="text-center py-12 bg-white rounded-lg shadow border border-gray-200">
-                                <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4"/>
-                                <p className="text-gray-600">
+                            <div className="text-center py-12 bg-card rounded-lg shadow border border-border">
+                                <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4"/>
+                                <p className="text-muted-foreground">
                                     Keine Spieldaten gefunden.
                                 </p>
                             </div>
@@ -309,9 +309,9 @@ export function SessionDetailPage() {
 
                 {/* Keine Dateien */}
                 {currentSession.status === 'completed' && currentSession.files.length === 0 && (
-                    <div className="text-center py-12 bg-white rounded-lg shadow border border-gray-200">
-                        <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4"/>
-                        <p className="text-gray-600">
+                    <div className="text-center py-12 bg-card rounded-lg shadow border border-border">
+                        <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4"/>
+                        <p className="text-muted-foreground">
                             Keine Dateien in dieser Session gefunden.
                         </p>
                     </div>

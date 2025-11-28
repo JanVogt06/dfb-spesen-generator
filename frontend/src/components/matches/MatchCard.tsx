@@ -157,16 +157,16 @@ export function MatchCard({ match, index, filename, onDownload, isDownloading }:
 
     return (
       <div>
-        <h4 className="font-medium text-gray-700 mb-2 flex items-center gap-1.5 text-sm sm:text-base">
+        <h4 className="font-medium text-foreground mb-2 flex items-center gap-1.5 text-sm sm:text-base">
           <Calendar className="h-4 w-4" />
           Spieldetails
         </h4>
-        <div className="bg-gray-50 p-3 rounded-lg">
+        <div className="bg-muted p-3 rounded-lg">
           <div className="grid gap-2 text-xs sm:text-sm">
             {fieldsToShow.map(([key, value]) => (
               <div key={key} className="grid grid-cols-[100px_1fr] sm:grid-cols-[120px_1fr] gap-2">
-                <span className="text-gray-600 break-words">{formatFieldName(key)}:</span>
-                <span className="text-gray-900 break-words">{value}</span>
+                <span className="text-muted-foreground break-words">{formatFieldName(key)}:</span>
+                <span className="text-foreground break-words">{value}</span>
               </div>
             ))}
           </div>
@@ -192,27 +192,27 @@ export function MatchCard({ match, index, filename, onDownload, isDownloading }:
 
     return (
       <div className="border-t pt-4">
-        <h4 className="font-medium text-gray-700 mb-2 flex items-center gap-1.5 text-sm sm:text-base">
+        <h4 className="font-medium text-foreground mb-2 flex items-center gap-1.5 text-sm sm:text-base">
           <Euro className="h-4 w-4" />
           Spesen (TFV-Spesenordnung)
         </h4>
-        <div className="bg-gray-50 p-3 rounded-lg">
+        <div className="bg-muted p-3 rounded-lg">
           {spesen.sr_formatted ? (
             <div className="grid gap-2 text-xs sm:text-sm">
               <div className="grid grid-cols-[100px_1fr] sm:grid-cols-[120px_1fr] gap-2">
-                <span className="text-gray-600">SR:</span>
-                <span className="text-gray-900 font-medium">{spesen.sr_formatted}</span>
+                <span className="text-muted-foreground">SR:</span>
+                <span className="text-foreground font-medium">{spesen.sr_formatted}</span>
               </div>
               {spesen.sra_formatted && hasSRA && (
                 <div className="grid grid-cols-[100px_1fr] sm:grid-cols-[120px_1fr] gap-2">
-                  <span className="text-gray-600">SRA:</span>
-                  <span className="text-gray-900 font-medium">{spesen.sra_formatted}</span>
+                  <span className="text-muted-foreground">SRA:</span>
+                  <span className="text-foreground font-medium">{spesen.sra_formatted}</span>
                 </div>
               )}
             </div>
           ) : (
             spesen.hinweis && (
-              <p className="text-xs sm:text-sm text-gray-600 italic">
+              <p className="text-xs sm:text-sm text-muted-foreground italic">
                 {spesen.hinweis}
               </p>
             )
@@ -229,20 +229,20 @@ export function MatchCard({ match, index, filename, onDownload, isDownloading }:
 
     return (
       <div className="border-t pt-4">
-        <h4 className="font-medium text-gray-700 mb-2 flex items-center gap-1.5 text-sm sm:text-base">
+        <h4 className="font-medium text-foreground mb-2 flex items-center gap-1.5 text-sm sm:text-base">
           <Users className="h-4 w-4" />
           Schiedsrichter
         </h4>
         <div className="space-y-3">
           {match.schiedsrichter.map((sr, idx) => (
-            <div key={idx} className="bg-gray-50 p-3 rounded-lg">
+            <div key={idx} className="bg-muted p-3 rounded-lg">
               <div className="grid gap-2 text-xs sm:text-sm">
                 {Object.entries(sr)
                   .filter(([_, value]) => value)
                   .map(([key, value]) => (
                     <div key={key} className="grid grid-cols-[100px_1fr] sm:grid-cols-[120px_1fr] gap-2">
-                      <span className="text-gray-600 break-words">{formatFieldName(key)}:</span>
-                      <span className="text-gray-900 break-words">{value}</span>
+                      <span className="text-muted-foreground break-words">{formatFieldName(key)}:</span>
+                      <span className="text-foreground break-words">{value}</span>
                     </div>
                   ))}
               </div>
@@ -266,16 +266,16 @@ export function MatchCard({ match, index, filename, onDownload, isDownloading }:
 
     return (
       <div className="border-t pt-4">
-        <h4 className="font-medium text-gray-700 mb-2 flex items-center gap-1.5 text-sm sm:text-base">
+        <h4 className="font-medium text-foreground mb-2 flex items-center gap-1.5 text-sm sm:text-base">
           <MapPin className="h-4 w-4" />
           Spielstätte
         </h4>
-        <div className="bg-gray-50 p-3 rounded-lg">
+        <div className="bg-muted p-3 rounded-lg">
           <div className="grid gap-2 text-xs sm:text-sm">
             {fieldsToShow.map(([key, value]) => (
               <div key={key} className="grid grid-cols-[100px_1fr] sm:grid-cols-[120px_1fr] gap-2">
-                <span className="text-gray-600 break-words">{formatFieldName(key)}:</span>
-                <span className="text-gray-900 break-words">{value}</span>
+                <span className="text-muted-foreground break-words">{formatFieldName(key)}:</span>
+                <span className="text-foreground break-words">{value}</span>
               </div>
             ))}
           </div>
@@ -301,7 +301,7 @@ export function MatchCard({ match, index, filename, onDownload, isDownloading }:
   };
 
   return (
-    <Card className="hover:shadow-lg transition-all duration-200 border-gray-200">
+    <Card className="hover:shadow-lg transition-all duration-200 border-border">
       <CardHeader className="pb-3">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
           <div className="flex-1 min-w-0">
@@ -311,7 +311,7 @@ export function MatchCard({ match, index, filename, onDownload, isDownloading }:
               </CardTitle>
               {renderHeaderSpesen()}
             </div>
-            <p className="text-xs sm:text-sm text-gray-600 flex items-center gap-1.5 break-words">
+            <p className="text-xs sm:text-sm text-muted-foreground flex items-center gap-1.5 break-words">
               <Calendar className="h-3.5 w-3.5 flex-shrink-0" />
               {getMatchSubtitle()}
             </p>

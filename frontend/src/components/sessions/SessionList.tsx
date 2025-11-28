@@ -9,12 +9,12 @@ interface SessionListProps {
 export function SessionList({ sessions }: SessionListProps) {
   if (sessions.length === 0) {
     return (
-      <div className="text-center py-12 bg-white rounded-lg shadow border border-gray-200">
-        <FileText className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-        <p className="text-gray-600 font-medium mb-2">
+      <div className="text-center py-12 bg-card rounded-lg shadow border border-border">
+        <FileText className="h-16 w-16 text-muted-foreground/50 mx-auto mb-4" />
+        <p className="text-muted-foreground font-medium mb-2">
           Noch keine Sessions
         </p>
-        <p className="text-gray-500 text-sm">
+        <p className="text-muted-foreground text-sm">
           Starte die erste Generierung mit dem Button oben!
         </p>
       </div>

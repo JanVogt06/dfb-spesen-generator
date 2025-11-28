@@ -122,16 +122,16 @@ export function DashboardPage() {
     <div className="min-h-screen bg-gradient-to-br from-background to-muted">
       <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
         {/* Header */}
-        <div className="bg-primary rounded-xl sm:rounded-2xl shadow-lg mb-6 sm:mb-8 p-4 sm:p-6 lg:p-8 text-primary-foreground">
+        <div className="bg-primary dark:bg-slate-800 rounded-xl sm:rounded-2xl shadow-lg mb-6 sm:mb-8 p-4 sm:p-6 lg:p-8 text-primary-foreground">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold">TFV Spesen Generator</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold text-white">TFV Spesen Generator</h1>
             </div>
             <div className="flex flex-col sm:flex-row gap-2">
               <Button
                 onClick={() => navigate('/settings')}
                 variant="outline"
-                className="bg-white/10 border-white/20 text-white hover:bg-white/20 backdrop-blur-sm w-full sm:w-auto"
+                className="bg-white/20 border-white/30 text-white hover:bg-white/30 dark:bg-slate-700 dark:border-slate-600 dark:hover:bg-slate-600 backdrop-blur-sm w-full sm:w-auto"
               >
                 <Settings className="mr-2 h-4 w-4" />
                 Einstellungen
@@ -139,7 +139,7 @@ export function DashboardPage() {
               <Button
                 onClick={logout}
                 variant="outline"
-                className="bg-white/10 border-white/20 text-white hover:bg-white/20 backdrop-blur-sm w-full sm:w-auto"
+                className="bg-white/20 border-white/30 text-white hover:bg-white/30 dark:bg-slate-700 dark:border-slate-600 dark:hover:bg-slate-600 backdrop-blur-sm w-full sm:w-auto"
               >
                 <LogOut className="mr-2 h-4 w-4" />
                 Abmelden

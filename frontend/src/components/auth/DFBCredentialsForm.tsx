@@ -109,7 +109,7 @@ export function DFBCredentialsForm() {
             {isLoading ? 'Speichern...' : hasCredentials ? 'Aktualisieren' : 'Speichern'}
           </Button>
 
-          <p className="text-xs text-gray-500 break-words">
+          <p className="text-xs text-muted-foreground break-words">
             Deine Zugangsdaten werden verschlüsselt gespeichert.
           </p>
         </form>
