@@ -117,4 +117,16 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Mobile: Leicht kleinere Basis-Schriftgröße */
+  html {
+    font-size: 14px;
+  }
+
+  /* Ab sm (640px): Normale Schriftgröße */
+  @media (min-width: 640px) {
+    html {
+      font-size: 16px;
+    }
+  }
 }

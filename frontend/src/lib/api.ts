@@ -2,37 +2,37 @@ import axios from 'axios';
 
 // Axios-Instanz mit Defaults
 export const api = axios.create({
-  baseURL: '',  // Leer = nutzt Vite Proxy
-  headers: {
-    'Content-Type': 'application/json',
-  },
+    baseURL: '',  // Leer = nutzt Vite Proxy
+    headers: {
+        'Content-Type': 'application/json',
+    },
 });
 
 // Request-Interceptor: Fügt JWT-Token zu jedem Request hinzu
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
+    const token = localStorage.getItem('token');
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
 });
 
 // Response-Interceptor: Behandelt Fehler global
 api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    // Nur bei 401 UND wenn es NICHT der Login-Endpoint ist
-    if (error.response?.status === 401) {
-      const isLoginRequest = error.config?.url?.includes('/api/auth/login');
-      const isRegisterRequest = error.config?.url?.includes('/api/auth/register');
+    (response) => response,
+    (error) => {
+        // Nur bei 401 UND wenn es NICHT der Login-Endpoint ist
+        if (error.response?.status === 401) {
+            const isLoginRequest = error.config?.url?.includes('/api/auth/login');
+            const isRegisterRequest = error.config?.url?.includes('/api/auth/register');
 
-      // Nur redirecten wenn es NICHT Login/Register ist
-      // (Das bedeutet: Token ist abgelaufen während User eingeloggt war)
-      if (!isLoginRequest && !isRegisterRequest) {
-        localStorage.removeItem('token');
-        window.location.href = '/login';
-      }
+            // Nur redirecten wenn es NICHT Login/Register ist
+            // (Das bedeutet: Token ist abgelaufen während User eingeloggt war)
+            if (!isLoginRequest && !isRegisterRequest) {
+                localStorage.removeItem('token');
+                window.location.href = '/login';
+            }
+        }
+        return Promise.reject(error);
     }
-    return Promise.reject(error);
-  }
 );
