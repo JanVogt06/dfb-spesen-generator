@@ -1,7 +1,7 @@
 import {Button} from '@/components/ui/button';
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from '@/components/ui/card';
 import {Badge} from '@/components/ui/badge';
-import {useNavigate} from 'react-router-dom';
+import {useNavigate, Link} from 'react-router-dom';
 import {
     FileText,
     Clock,
@@ -488,17 +488,48 @@ export function LandingPage() {
             <footer
                 className="relative py-12 border-t border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm">
                 <div className="container mx-auto px-4">
-                    <div className="text-center text-slate-600 dark:text-slate-300">
-                        <div className="flex items-center justify-center gap-2 mb-4">
-                            <div
-                                className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-blue-600 rounded-lg flex items-center justify-center">
-                                <FileText className="w-5 h-5 text-white"/>
+                    <div className="max-w-4xl mx-auto">
+                        {/* Logo & Beschreibung */}
+                        <div className="flex flex-col items-center text-center mb-8">
+                            <div className="flex items-center gap-3 mb-3">
+                                <div
+                                    className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
+                                    <FileText className="w-6 h-6 text-white"/>
+                                </div>
+                                <span className="text-xl font-bold text-slate-800 dark:text-slate-100">
+            TFV Spesen Generator
+          </span>
                             </div>
-                            <span className="font-bold text-slate-800 dark:text-slate-100">TFV Spesen Generator</span>
+                            <p className="text-slate-500 dark:text-slate-400 text-sm max-w-md">
+                                Automatisierte Spesenabrechnung für Schiedsrichter des Thüringer Fußball-Verbandes
+                            </p>
                         </div>
-                        <p className="text-sm">
-                            © 2025 TFV Spesen Generator. Entwickelt für Thüringer Schiedsrichter.
-                        </p>
+
+                        {/* Trennlinie */}
+                        <div className="border-t border-slate-200 dark:border-slate-700 pt-6">
+                            <div
+                                className="flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-slate-500 dark:text-slate-400">
+                                <p>© 2025 TFV Spesen Generator</p>
+
+                                <div className="flex items-center gap-2 sm:gap-4 flex-wrap justify-center">
+                                    <span>Betreiber: Jan Vogt</span>
+                                    <span className="text-slate-300 dark:text-slate-600">·</span>
+                                    <a
+                                        href="mailto:spesen-generator@jan-vogt.dev"
+                                        className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
+                                    >
+                                        spesen-generator@jan-vogt.dev
+                                    </a>
+                                    <span className="text-slate-300 dark:text-slate-600">·</span>
+                                    <Link
+                                        to="/datenschutz"
+                                        className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
+                                    >
+                                        Datenschutz
+                                    </Link>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </footer>

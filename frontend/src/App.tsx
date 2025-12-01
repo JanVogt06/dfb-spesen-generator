@@ -6,6 +6,7 @@ import {DashboardPage} from './pages/Dashboard';
 import {SettingsPage} from './pages/Settings';
 import {SessionDetailPage} from './pages/SessionDetail';
 import {isAuthenticated} from './lib/auth';
+import {Datenschutz} from './pages/Datenschutz';
 
 function ProtectedRoute({children}: { children: React.ReactNode }) {
     if (!isAuthenticated()) {
@@ -22,6 +23,7 @@ function App() {
                 <Route path="/" element={<LandingPage/>}/>
                 <Route path="/login" element={<LoginPage/>}/>
                 <Route path="/register" element={<RegisterPage/>}/>
+                <Route path="/datenschutz" element={<Datenschutz />} />
 
                 {/* Protected Routes */}
                 <Route
