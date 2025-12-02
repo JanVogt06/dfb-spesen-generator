@@ -10,10 +10,12 @@ export interface SessionFile {
     created_at: string;
 }
 
-export interface SessionProgress {
+interface SessionProgress {
     current: number;
     total: number;
     step: string;
+    error_code?: string;
+    error_message?: string;
 }
 
 export interface Session {

@@ -253,12 +253,30 @@ export function SessionDetailPage() {
 
                 {/* Fehler */}
                 {currentSession.status === 'failed' && (
-                    <div className="mb-6 sm:mb-8 p-3 sm:p-4 bg-red-50 border border-red-200 rounded-lg shadow-sm">
+                    <div
+                        className="mb-6 sm:mb-8 p-3 sm:p-4 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg shadow-sm">
                         <div className="flex items-start gap-2">
-                            <XCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5"/>
-                            <p className="text-sm text-red-800">
-                                Bei der Generierung ist ein Fehler aufgetreten.
-                            </p>
+                            <XCircle className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5"/>
+                            <div>
+                                <p className="text-sm font-medium text-red-800 dark:text-red-300">
+                                    {currentSession.progress?.error_code === 'DFB_CREDENTIALS_INVALID'
+                                        ? 'DFBnet-Login fehlgeschlagen'
+                                        : 'Generierung fehlgeschlagen'}
+                                </p>
+                                <p className="text-sm text-red-700 dark:text-red-400 mt-1">
+                                    {currentSession.progress?.error_message || 'Bei der Generierung ist ein Fehler aufgetreten.'}
+                                </p>
+                                {currentSession.progress?.error_code === 'DFB_CREDENTIALS_INVALID' && (
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="mt-3 text-red-700 border-red-300 hover:bg-red-100 dark:text-red-300 dark:border-red-700 dark:hover:bg-red-900/30"
+                                        onClick={() => navigate('/settings')}
+                                    >
+                                        Zu den Einstellungen
+                                    </Button>
+                                )}
+                            </div>
                         </div>
                     </div>
                 )}

@@ -129,6 +129,16 @@ class CredentialsMissingError(APIError):
             details="Bitte speichere deine DFB-Credentials unter /api/auth/dfb-credentials"
         )
 
+class DFBCredentialsInvalidError(APIError):
+    """401 - DFB-Credentials sind ungültig"""
+
+    def __init__(self, details: Optional[str] = None):
+        super().__init__(
+            status_code=401,
+            error_code="DFB_CREDENTIALS_INVALID",
+            message="Die DFBnet-Zugangsdaten sind ungültig",
+            details=details or "Bitte prüfe Benutzername und Passwort in den Einstellungen"
+        )
 
 # ===== Global Exception Handler =====
 

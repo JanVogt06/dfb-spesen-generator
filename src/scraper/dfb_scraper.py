@@ -7,6 +7,7 @@ from playwright.sync_api import sync_playwright, Page, Browser
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from utils.logger import setup_logger
+from core.errors import DFBCredentialsInvalidError
 
 logger = setup_logger("dfb_scraper")
 
@@ -173,21 +174,25 @@ class DFBScraper:
                 if error_message.is_visible(timeout=2000):
                     error_text = error_message.inner_text()
                     logger.error(f"Login-Fehler: {error_text}")
-                    raise Exception(f"Login fehlgeschlagen: {error_text}")
+                    # GEÄNDERT: Spezifische Exception werfen
+                    raise DFBCredentialsInvalidError(f"DFBnet meldet: {error_text}")
+            except DFBCredentialsInvalidError:
+                raise  # Weiterleiten
             except:
                 pass
 
             # 3. Prüfung: Ist Login-Formular noch sichtbar?
             if self.page.locator('input[type="password"]').is_visible(timeout=3000):
                 logger.error("Login fehlgeschlagen - Login-Formular noch sichtbar")
-                raise Exception("Login fehlgeschlagen - Bitte Credentials prüfen")
+                # GEÄNDERT: Spezifische Exception werfen
+                raise DFBCredentialsInvalidError()
 
             # Wenn wir hier sind, war Login erfolgreich
             logger.info("Login erfolgreich")
 
+        except DFBCredentialsInvalidError:
+            raise  # Weiterleiten ohne zu wrappen
         except Exception as e:
-            if "Login fehlgeschlagen" in str(e):
-                raise
             logger.error(f"Fehler beim Login: {e}")
             raise
 

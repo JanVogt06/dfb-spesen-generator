@@ -176,10 +176,34 @@ export function SessionCard({session}: SessionCardProps) {
 
                 {/* Fehler */}
                 {isSessionFailed(session) && (
-                    <div
-                        className="text-sm text-destructive flex items-start gap-2 p-3 bg-destructive/10 rounded-lg border border-destructive/20">
-                        <XCircle className="h-4 w-4 flex-shrink-0 mt-0.5"/>
-                        <span>Bei der Generierung ist ein Fehler aufgetreten.</span>
+                    <div className="space-y-3">
+                        <div
+                            className="text-sm text-destructive flex items-start gap-2 p-3 bg-destructive/10 rounded-lg border border-destructive/20">
+                            <XCircle className="h-4 w-4 flex-shrink-0 mt-0.5"/>
+                            <div>
+                                <p className="font-medium">
+                                    {session.progress?.error_code === 'DFB_CREDENTIALS_INVALID'
+                                        ? 'DFBnet-Login fehlgeschlagen'
+                                        : 'Generierung fehlgeschlagen'}
+                                </p>
+                                <p className="mt-1 text-destructive/80">
+                                    {session.progress?.error_message || 'Bei der Generierung ist ein Fehler aufgetreten.'}
+                                </p>
+                            </div>
+                        </div>
+                        <Button
+                            className="w-full"
+                            variant="outline"
+                            onClick={() => navigate(
+                                session.progress?.error_code === 'DFB_CREDENTIALS_INVALID'
+                                    ? '/settings'
+                                    : `/session/${session.session_id}`
+                            )}
+                        >
+                            {session.progress?.error_code === 'DFB_CREDENTIALS_INVALID'
+                                ? 'Zu den Einstellungen'
+                                : 'Details anzeigen'}
+                        </Button>
                     </div>
                 )}
             </CardContent>

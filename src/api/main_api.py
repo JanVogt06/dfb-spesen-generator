@@ -43,7 +43,8 @@ from core.errors import (
     AuthorizationError,
     CredentialsMissingError,
     api_error_handler,
-    generic_exception_handler
+    generic_exception_handler,
+    DFBCredentialsInvalidError
 )
 
 # Lade .env
@@ -205,32 +206,23 @@ def _add_spesen_to_match(match: dict) -> dict:
 # ===== Generation Process =====
 
 def run_generation_process(
-    session_path: Path,
-    session_id: str,
-    dfb_username: str,
-    dfb_password: str
+        session_path: Path,
+        session_id: str,
+        dfb_username: str,
+        dfb_password: str
 ):
     """
     Führt die Generierung in einem separaten Prozess aus.
-    WICHTIG: Muss eigenständig sein (kein Zugriff auf FastAPI app!)
-
-    Args:
-        session_path: Pfad zum Session-Ordner
-        session_id: Session-ID für DB-Updates
-        dfb_username: DFB.net Benutzername (entschlüsselt)
-        dfb_password: DFB.net Passwort (entschlüsselt)
     """
-    # Eigener Logger für den Prozess
     from utils.logger import setup_logger
-    process_logger = setup_logger("generation_process")
+    from core.errors import DFBCredentialsInvalidError
 
-    # Session Manager EINMAL initialisieren (vor try-Block)
+    process_logger = setup_logger("generation_process")
     sm = SessionManager()
 
     try:
         process_logger.info(f"Starte Generierung für Session {session_path.name}")
 
-        # Update: Scraping started
         sm.update_session_metadata(
             session_path,
             status="scraping",
@@ -238,7 +230,6 @@ def run_generation_process(
         )
         db_update_session_status(session_id, "scraping")
 
-        # Nutze die bestehende Funktion aus main.py MIT Credentials
         matches_data, _ = scrape_matches_with_session(
             session_path,
             username=dfb_username,
@@ -246,7 +237,6 @@ def run_generation_process(
         )
 
         if matches_data:
-            # Update: Documents generation started
             sm.update_session_metadata(
                 session_path,
                 status="generating",
@@ -254,10 +244,8 @@ def run_generation_process(
             )
             db_update_session_status(session_id, "generating")
 
-            # Nutze die bestehende Funktion aus main.py
             generate_documents_in_session(matches_data, session_path)
 
-            # Update: Completed
             sm.update_session_metadata(session_path, status="completed")
             db_update_session_status(session_id, "completed")
 
@@ -265,12 +253,37 @@ def run_generation_process(
         else:
             raise Exception("Keine Spiele gefunden")
 
-    except Exception as e:
-        process_logger.error(f"Fehler in Session {session_path.name}: {e}")
-        # Verwende existierende sm-Instanz (keine Neuinstanziierung nötig)
-        sm.update_session_metadata(session_path, status="failed")
+    except DFBCredentialsInvalidError as e:
+        # SPEZIFISCH: DFB-Credentials ungültig
+        process_logger.error(f"DFB-Login fehlgeschlagen: {e.message}")
+        sm.update_session_metadata(
+            session_path,
+            status="failed",
+            progress={
+                "current": 0,
+                "total": 0,
+                "step": "Fehler",
+                "error_code": "DFB_CREDENTIALS_INVALID",
+                "error_message": "Die DFBnet-Zugangsdaten sind ungültig. Bitte prüfe Benutzername und Passwort in den Einstellungen."
+            }
+        )
         db_update_session_status(session_id, "failed")
 
+    except Exception as e:
+        # GENERISCH: Anderer Fehler
+        process_logger.error(f"Fehler in Session {session_path.name}: {e}")
+        sm.update_session_metadata(
+            session_path,
+            status="failed",
+            progress={
+                "current": 0,
+                "total": 0,
+                "step": "Fehler",
+                "error_code": "GENERATION_ERROR",
+                "error_message": "Bei der Generierung ist ein Fehler aufgetreten."
+            }
+        )
+        db_update_session_status(session_id, "failed")
 
 @app.post("/api/generate", response_model=SessionResponse)
 async def generate_spesen(
