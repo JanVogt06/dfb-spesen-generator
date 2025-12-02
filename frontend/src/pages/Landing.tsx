@@ -113,7 +113,7 @@ export function LandingPage() {
                             </div>
                         </div>
                         <div>
-                            <h1 className="text-xl font-black text-slate-800 dark:text-slate-100 tracking-tight">TFV
+                            <h1 className="text-l font-black text-slate-800 dark:text-slate-100 tracking-tight">TFV
                                 Spesen Generator</h1>
                             <p className="text-xs text-emerald-600 font-medium">Für Schiedsrichter in Thüringen</p>
                         </div>
@@ -204,7 +204,7 @@ export function LandingPage() {
             </section>
 
             {/* Features Section */}
-            <section className="relative py-20 sm:py-32">
+            <section className="relative py-20 sm:py-16">
                 <div className="container mx-auto px-4">
                     <div className="max-w-6xl mx-auto">
                         <div className="text-center mb-16">
@@ -261,7 +261,7 @@ export function LandingPage() {
             </section>
 
             {/* How it works Section */}
-            <section className="relative py-20 sm:py-32">
+            <section className="relative py-20 sm:py-16">
                 <div className="container mx-auto px-4">
                     <div className="max-w-4xl mx-auto">
                         <div className="text-center mb-16">
@@ -350,7 +350,7 @@ export function LandingPage() {
             </section>
 
             {/* FAQ Section */}
-            <section className="relative py-20 sm:py-32">
+            <section className="relative py-20 sm:py-16">
                 <div className="container mx-auto px-4">
                     <div className="max-w-4xl mx-auto">
                         <div className="text-center mb-16">
