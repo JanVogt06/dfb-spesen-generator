@@ -281,6 +281,47 @@ export function DashboardPage() {
                                     <h2 className="text-xl sm:text-2xl font-semibold mb-4 text-foreground">
                                         Alle Spiele
                                     </h2>
+
+                                    {/* Fehler-Banner wenn letzte Session fehlgeschlagen */}
+                                    {sessions.length > 0 && sessions[0].status === 'failed' && (
+                                        <Card className="mb-6 border-destructive/30 bg-destructive/5">
+                                            <CardContent className="p-4 sm:p-5">
+                                                <div className="flex items-start gap-3">
+                                                    <div className="flex-shrink-0">
+                                                        <div
+                                                            className="w-10 h-10 bg-destructive/10 rounded-full flex items-center justify-center">
+                                                            <AlertCircle className="h-5 w-5 text-destructive"/>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <h3 className="text-base font-semibold text-destructive mb-1">
+                                                            {sessions[0].progress?.error_code === 'DFB_CREDENTIALS_INVALID'
+                                                                ? 'DFBnet-Login fehlgeschlagen'
+                                                                : 'Letzte Generierung fehlgeschlagen'}
+                                                        </h3>
+                                                        <p className="text-sm text-destructive/80 mb-3">
+                                                            {sessions[0].progress?.error_message || 'Bei der Generierung ist ein Fehler aufgetreten.'}
+                                                        </p>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="border-destructive/30 text-destructive hover:bg-destructive/10"
+                                                            onClick={() => navigate(
+                                                                sessions[0].progress?.error_code === 'DFB_CREDENTIALS_INVALID'
+                                                                    ? '/settings'
+                                                                    : `/session/${sessions[0].session_id}`
+                                                            )}
+                                                        >
+                                                            {sessions[0].progress?.error_code === 'DFB_CREDENTIALS_INVALID'
+                                                                ? 'Zugangsdaten prüfen'
+                                                                : 'Details anzeigen'}
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+                                    )}
+
                                     <MatchList matches={matches}/>
                                 </div>
                             ) : (
