@@ -258,11 +258,7 @@ class DFBScraper:
         logger.info("Sammle alle Spiele...")
 
         try:
-            # Warte bis ERSTES Spiel-Element geladen ist
-            first_match = self.page.locator('sria-matches-match-list-item').first
-            first_match.wait_for(state="visible", timeout=30000)
-
-            # Kleine Pause damit alle Spiele nachgeladen sind
+            # Kurz warten bis Seite geladen ist
             self.page.wait_for_timeout(2000)
 
             # Finde alle Spiel-Container (jeder Container = 1 Spiel)

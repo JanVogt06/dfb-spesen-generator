@@ -236,7 +236,11 @@ def run_generation_process(
             password=dfb_password
         )
 
-        if matches_data:
+        # matches_data ist jetzt immer eine Liste (kann leer sein)
+        if matches_data is None:
+            matches_data = []
+
+        if len(matches_data) > 0:
             sm.update_session_metadata(
                 session_path,
                 status="generating",
@@ -249,9 +253,17 @@ def run_generation_process(
             sm.update_session_metadata(session_path, status="completed")
             db_update_session_status(session_id, "completed")
 
-            process_logger.info(f"Session {session_path.name} erfolgreich abgeschlossen")
+            process_logger.info(f"Session {session_path.name} erfolgreich abgeschlossen mit {len(matches_data)} Spielen")
         else:
-            raise Exception("Keine Spiele gefunden")
+            # 0 Spiele ist OK (z.B. Winterpause) - trotzdem als "completed" markieren
+            sm.update_session_metadata(
+                session_path,
+                status="completed",
+                progress={"current": 0, "total": 0, "step": "Keine Spiele gefunden"}
+            )
+            db_update_session_status(session_id, "completed")
+
+            process_logger.info(f"Session {session_path.name} abgeschlossen - keine Spiele vorhanden (Winterpause?)")
 
     except DFBCredentialsInvalidError as e:
         # SPEZIFISCH: DFB-Credentials ungültig

@@ -84,7 +84,7 @@ def scrape_matches_with_session(
             # Alle Spiele scrapen MIT Progress-Callback
             all_matches = scraper.scrape_all_matches(progress_callback=update_scraping_progress)
 
-            # Daten in Session speichern
+            # Daten in Session speichern - AUCH BEI 0 SPIELEN!
             output_file = session_path / "spesen_data.json"
             with open(output_file, 'w', encoding='utf-8') as f:
                 json.dump(all_matches, f, ensure_ascii=False, indent=2)
@@ -101,7 +101,6 @@ def scrape_matches_with_session(
             status="failed"
         )
         raise
-
 
 def generate_documents_in_session(matches_data: List[dict], session_path: Path) -> List[Path]:
     """
