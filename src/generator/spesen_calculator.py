@@ -79,6 +79,9 @@ def calculate_spesen(spielklasse: str, mannschaftsart: str) -> Tuple[Optional[fl
 
 def _is_ueberregional(spielklasse: str) -> bool:
     """Prüft ob Spiel überregional ist (DFB, Regionalliga, etc.)."""
+    # Kreis-Spielklassen sind immer lokal (z.B. Kreisoberliga ≠ Oberliga)
+    if "kreis" in spielklasse:
+        return False
     ueberregional_keywords = [
         "bundesliga",
         "regionalliga",
