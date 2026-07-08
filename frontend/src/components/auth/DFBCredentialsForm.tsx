@@ -50,17 +50,17 @@ export function DFBCredentialsForm() {
     };
 
     return (
-        <Card className="w-full max-w-md mx-4 sm:mx-0">
+        <Card className="w-full">
             <CardHeader className="px-4 sm:px-6">
-                <CardTitle className="text-xl sm:text-2xl">DFB-Zugangsdaten</CardTitle>
+                <CardTitle className="text-base sm:text-lg">DFB-Zugangsdaten</CardTitle>
                 <CardDescription className="text-sm">
                     Speichere deine DFBnet-Zugangsdaten für die automatische Generierung
                 </CardDescription>
             </CardHeader>
             <CardContent className="px-4 sm:px-6">
                 {hasCredentials && (
-                    <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-md">
-                        <p className="text-sm text-green-800">
+                    <div className="mb-4 rounded-lg bg-success/10 px-3 py-2 ring-1 ring-success/20">
+                        <p className="text-sm text-success">
                             ✓ DFB-Credentials sind gespeichert
                         </p>
                     </div>
@@ -94,13 +94,13 @@ export function DFBCredentialsForm() {
                     </div>
 
                     {error && (
-                        <div className="text-sm text-red-500 break-words">
+                        <div className="text-sm break-words text-destructive">
                             {error}
                         </div>
                     )}
 
                     {success && (
-                        <div className="text-sm text-green-600 break-words">
+                        <div className="text-sm break-words text-success">
                             {success}
                         </div>
                     )}

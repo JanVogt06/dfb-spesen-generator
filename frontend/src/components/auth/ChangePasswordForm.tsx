@@ -75,10 +75,10 @@ export function ChangePasswordForm() {
     };
 
     return (
-        <Card className="w-full max-w-md mx-4 sm:mx-0">
+        <Card className="w-full">
             <CardHeader className="px-4 sm:px-6">
-                <CardTitle className="text-xl sm:text-2xl flex items-center gap-2">
-                    <Lock className="h-5 w-5"/>
+                <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+                    <Lock className="size-4"/>
                     Passwort ändern
                 </CardTitle>
                 <CardDescription className="text-sm">
@@ -163,15 +163,15 @@ export function ChangePasswordForm() {
 
                     {/* Fehler-Anzeige */}
                     {error && (
-                        <div className="p-3 bg-red-50 border border-red-200 rounded-md">
-                            <p className="text-sm text-red-600 break-words">{error}</p>
+                        <div className="rounded-lg bg-destructive/10 px-3 py-2 ring-1 ring-destructive/20">
+                            <p className="text-sm break-words text-destructive">{error}</p>
                         </div>
                     )}
 
                     {/* Erfolgs-Anzeige */}
                     {success && (
-                        <div className="p-3 bg-green-50 border border-green-200 rounded-md">
-                            <p className="text-sm text-green-600 break-words">✓ {success}</p>
+                        <div className="rounded-lg bg-success/10 px-3 py-2 ring-1 ring-success/20">
+                            <p className="text-sm break-words text-success">✓ {success}</p>
                         </div>
                     )}
 

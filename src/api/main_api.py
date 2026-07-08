@@ -805,6 +805,20 @@ async def health_check():
     }
 
 
+@app.get("/api/stats/public")
+async def get_public_stats():
+    """
+    Oeffentliche Statistiken fuer die Landingpage (kein Login noetig).
+    Zaehlt live die generierten DOCX-Dokumente im Output-Verzeichnis.
+    """
+    try:
+        count = sum(1 for _ in session_manager.base_output_dir.glob("*/*.docx"))
+    except Exception as e:
+        logger.error(f"Fehler beim Zaehlen der Dokumente: {e}")
+        count = 0
+    return {"documents_generated": count}
+
+
 # ===== Frontend Routes =====
 @app.get("/")
 async def root():

@@ -2,34 +2,32 @@ import {useState} from 'react';
 import {useNavigate} from 'react-router-dom';
 import type {Session} from '@/lib/sessions';
 import {getDownloadAllUrl, isSessionRunning, isSessionCompleted, isSessionFailed} from '@/lib/sessions';
-import {Card, CardContent, CardDescription, CardHeader, CardTitle} from '@/components/ui/card';
+import {Card, CardContent, CardHeader, CardTitle} from '@/components/ui/card';
+import {Separator} from '@/components/ui/separator';
 import {Button} from '@/components/ui/button';
 import {SessionProgress} from './SessionProgress';
 import {api} from '@/lib/api';
-import {
-    Clock,
-    PlayCircle,
-    Database,
-    FileText,
-    CheckCircle2,
-    XCircle,
-    Eye,
-    Download
-} from 'lucide-react';
-import type {LucideIcon} from 'lucide-react';
+import {FileText, XCircle, Eye, Download} from 'lucide-react';
+import {cn} from '@/lib/utils';
 import type {SessionStatus} from '@/lib/sessionUtils';
 
 interface SessionCardProps {
-    session: Session;  // GEÄNDERT: Nicht mehr "initialSession", sondern "session" - wird von Parent aktualisiert
+    session: Session;
 }
+
+const STATUS_META: Record<SessionStatus, { text: string; dotClass: string; pulse?: boolean }> = {
+    pending: {text: 'Wartend', dotClass: 'bg-muted-foreground/40'},
+    in_progress: {text: 'Läuft', dotClass: 'bg-primary', pulse: true},
+    scraping: {text: 'Scraping', dotClass: 'bg-primary', pulse: true},
+    generating: {text: 'Generierung', dotClass: 'bg-primary', pulse: true},
+    completed: {text: 'Fertig', dotClass: 'bg-success'},
+    failed: {text: 'Fehler', dotClass: 'bg-destructive'},
+};
 
 export function SessionCard({session}: SessionCardProps) {
     const navigate = useNavigate();
     const [isDownloading, setIsDownloading] = useState(false);
     const [downloadError, setDownloadError] = useState<string | null>(null);
-
-    // ENTFERNT: Kein eigenes Polling mehr - Parent (Dashboard) macht das zentral
-    // const { session } = useSessionPolling(...)
 
     const handleDownload = async () => {
         setIsDownloading(true);
@@ -56,59 +54,15 @@ export function SessionCard({session}: SessionCardProps) {
         }
     };
 
-    const getStatusBadge = (status: SessionStatus) => {
-        const badges: Record<SessionStatus, { text: string; className: string; icon: LucideIcon }> = {
-            pending: {
-                text: 'Wartend',
-                className: 'bg-muted text-muted-foreground border border-border',
-                icon: Clock
-            },
-            in_progress: {
-                text: 'Läuft',
-                className: 'bg-primary/10 text-primary border border-primary/20',
-                icon: PlayCircle
-            },
-            scraping: {
-                text: 'Scraping',
-                className: 'bg-accent text-accent-foreground border border-border',
-                icon: Database
-            },
-            generating: {
-                text: 'Generierung',
-                className: 'bg-secondary text-secondary-foreground border border-border',
-                icon: FileText
-            },
-            completed: {
-                text: 'Fertig',
-                className: 'bg-green-100 text-green-800 border border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800',
-                icon: CheckCircle2
-            },
-            failed: {
-                text: 'Fehler',
-                className: 'bg-destructive/10 text-destructive border border-destructive/20',
-                icon: XCircle
-            },
-        };
+    const statusMeta = STATUS_META[session.status] || STATUS_META.pending;
 
-        const badge = badges[status] || badges.pending;
-        const Icon = badge.icon;
-
-        return (
-            <span
-                className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs font-medium ${badge.className} flex items-center gap-1.5 whitespace-nowrap`}>
-        <Icon className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0"/>
-        <span className="hidden sm:inline">{badge.text}</span>
-      </span>
-        );
-    };
-
-    const formatSessionTitle = (createdAt: string) => {
+    const formatSessionDate = (createdAt: string) => {
         const date = new Date(createdAt);
-        return `Generierung vom ${date.toLocaleDateString('de-DE', {
+        return `${date.toLocaleDateString('de-DE', {
             day: '2-digit',
             month: '2-digit',
             year: 'numeric',
-        })} um ${date.toLocaleTimeString('de-DE', {
+        })} · ${date.toLocaleTimeString('de-DE', {
             hour: '2-digit',
             minute: '2-digit',
         })} Uhr`;
@@ -119,56 +73,56 @@ export function SessionCard({session}: SessionCardProps) {
     };
 
     return (
-        <Card className="hover:shadow-lg transition-all duration-200 border-border hover:border-primary/30">
-            <CardHeader>
-                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
-                    <div className="flex-1 min-w-0">
-                        <CardTitle className="text-base sm:text-lg break-words">
-                            {formatSessionTitle(session.created_at)}
-                        </CardTitle>
-                        <CardDescription className="text-xs mt-1 break-all">
-                            Session-ID: {session.session_id}
-                        </CardDescription>
-                    </div>
-                    <div className="self-start">
-                        {getStatusBadge(session.status)}
-                    </div>
-                </div>
+        <Card className="gap-0 overflow-hidden py-0 transition-all hover:ring-foreground/20">
+            <CardHeader className="flex h-11 flex-row items-center gap-2 px-4 py-0">
+                <CardTitle className="min-w-0 flex-1 truncate text-sm">
+                    {formatSessionDate(session.created_at)}
+                </CardTitle>
+                <span className="ml-auto flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground">
+                    <span className={cn('size-2 rounded-full', statusMeta.dotClass, statusMeta.pulse && 'animate-pulse')}/>
+                    {statusMeta.text}
+                </span>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <Separator/>
+            <CardContent className="space-y-3 p-4">
+                <p className="truncate font-mono text-xs text-muted-foreground">
+                    {session.session_id}
+                </p>
+
                 {/* Progress-Anzeige für laufende Sessions */}
                 {isSessionRunning(session) && <SessionProgress session={session}/>}
 
                 {/* Fertig: Download-Buttons */}
                 {isSessionCompleted(session) && (
-                    <div className="space-y-2">
-                        <p className="text-sm text-muted-foreground flex items-center gap-1.5">
-                            <FileText className="h-4 w-4 flex-shrink-0"/>
-                            <span>{getDocxCount()} Spesenabrechnungen generiert</span>
+                    <div className="space-y-3">
+                        <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                            <FileText className="size-4 shrink-0"/>
+                            <span>{getDocxCount()} Spesenabrechnungen</span>
                         </p>
                         {downloadError && (
-                            <div
-                                className="text-sm text-destructive flex items-start gap-2 p-3 bg-destructive/10 rounded-lg border border-destructive/20">
-                                <XCircle className="h-4 w-4 flex-shrink-0 mt-0.5"/>
+                            <div className="flex items-start gap-2 rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive ring-1 ring-destructive/20">
+                                <XCircle className="mt-0.5 size-4 shrink-0"/>
                                 <span>{downloadError}</span>
                             </div>
                         )}
-                        <div className="flex flex-col sm:flex-row gap-2">
+                        <div className="flex gap-2">
                             <Button
-                                className="flex-1 w-full sm:w-auto"
-                                onClick={() => navigate(`/session/${session.session_id}`)}
+                                className="flex-1"
+                                size="sm"
                                 variant="outline"
+                                onClick={() => navigate(`/session/${session.session_id}`)}
                             >
-                                <Eye className="mr-2 h-4 w-4"/>
-                                Details anzeigen
+                                <Eye className="size-4"/>
+                                Details
                             </Button>
                             <Button
-                                className="flex-1 w-full sm:w-auto"
+                                className="flex-1"
+                                size="sm"
                                 onClick={handleDownload}
                                 disabled={isDownloading}
                             >
-                                <Download className="mr-2 h-4 w-4"/>
-                                {isDownloading ? 'Lädt...' : 'Alle (ZIP)'}
+                                <Download className="size-4"/>
+                                {isDownloading ? 'Lädt...' : 'ZIP'}
                             </Button>
                         </div>
                     </div>
@@ -177,9 +131,8 @@ export function SessionCard({session}: SessionCardProps) {
                 {/* Fehler */}
                 {isSessionFailed(session) && (
                     <div className="space-y-3">
-                        <div
-                            className="text-sm text-destructive flex items-start gap-2 p-3 bg-destructive/10 rounded-lg border border-destructive/20">
-                            <XCircle className="h-4 w-4 flex-shrink-0 mt-0.5"/>
+                        <div className="flex items-start gap-2 rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive ring-1 ring-destructive/20">
+                            <XCircle className="mt-0.5 size-4 shrink-0"/>
                             <div>
                                 <p className="font-medium">
                                     {session.progress?.error_code === 'DFB_CREDENTIALS_INVALID'
@@ -193,6 +146,7 @@ export function SessionCard({session}: SessionCardProps) {
                         </div>
                         <Button
                             className="w-full"
+                            size="sm"
                             variant="outline"
                             onClick={() => navigate(
                                 session.progress?.error_code === 'DFB_CREDENTIALS_INVALID'

@@ -3,6 +3,7 @@ import {LoginPage} from './pages/Login';
 import {RegisterPage} from './pages/Register';
 import {LandingPage} from './pages/Landing';
 import {DashboardPage} from './pages/Dashboard';
+import {SessionsPage} from './pages/Sessions';
 import {SettingsPage} from './pages/Settings';
 import {SessionDetailPage} from './pages/SessionDetail';
 import {isAuthenticated} from './lib/auth';
@@ -31,6 +32,15 @@ function App() {
                     element={
                         <ProtectedRoute>
                             <DashboardPage/>
+                        </ProtectedRoute>
+                    }
+                />
+
+                <Route
+                    path="/sessions"
+                    element={
+                        <ProtectedRoute>
+                            <SessionsPage/>
                         </ProtectedRoute>
                     }
                 />

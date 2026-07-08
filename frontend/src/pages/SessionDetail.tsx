@@ -2,21 +2,31 @@ import {useState, useEffect} from 'react';
 import {useParams, useNavigate} from 'react-router-dom';
 import {Button} from '@/components/ui/button';
 import {Card, CardContent, CardHeader, CardTitle} from '@/components/ui/card';
+import {Separator} from '@/components/ui/separator';
+import {AppShell} from '@/components/layout/AppShell';
 import {getSession, getSessionMatches, getDownloadFileUrl, type Session, type MatchData} from '@/lib/sessions';
 import {api} from '@/lib/api';
 import {SessionProgress} from '@/components/sessions/SessionProgress';
 import {useSessionPolling} from '@/hooks/useSessionPolling';
 import {MatchCard} from '@/components/matches/MatchCard';
+import {cn} from '@/lib/utils';
+import type {SessionStatus} from '@/lib/sessionUtils';
 import {
     ArrowLeft,
-    Clock,
-    PlayCircle,
-    Database,
+    Loader2,
     FileText,
-    CheckCircle2,
     XCircle,
     AlertCircle
 } from 'lucide-react';
+
+const STATUS_META: Record<SessionStatus, { text: string; dotClass: string; pulse?: boolean }> = {
+    pending: {text: 'Wartend', dotClass: 'bg-muted-foreground/40'},
+    in_progress: {text: 'Läuft', dotClass: 'bg-primary', pulse: true},
+    scraping: {text: 'Scraping', dotClass: 'bg-primary', pulse: true},
+    generating: {text: 'Generierung', dotClass: 'bg-primary', pulse: true},
+    completed: {text: 'Fertig', dotClass: 'bg-success'},
+    failed: {text: 'Fehler', dotClass: 'bg-destructive'},
+};
 
 export function SessionDetailPage() {
     const {sessionId} = useParams<{ sessionId: string }>();
@@ -116,222 +126,158 @@ export function SessionDetailPage() {
         })} Uhr`;
     };
 
-    const getStatusBadge = (status: string) => {
-        const badges: Record<string, { text: string; className: string; icon: any }> = {
-            pending: {
-                text: 'Wartend',
-                className: 'bg-muted text-foreground border border-border',
-                icon: Clock
-            },
-            in_progress: {
-                text: 'Läuft',
-                className: 'bg-blue-100 text-blue-800 border border-blue-200',
-                icon: PlayCircle
-            },
-            scraping: {
-                text: 'Scraping',
-                className: 'bg-yellow-100 text-yellow-800 border border-yellow-200',
-                icon: Database
-            },
-            generating: {
-                text: 'Generierung',
-                className: 'bg-purple-100 text-purple-800 border border-purple-200',
-                icon: FileText
-            },
-            completed: {
-                text: 'Fertig',
-                className: 'bg-green-100 text-green-800 border border-green-200',
-                icon: CheckCircle2
-            },
-            failed: {
-                text: 'Fehler',
-                className: 'bg-red-100 text-red-800 border border-red-200',
-                icon: XCircle
-            },
-        };
-
-        const badge = badges[status] || badges.pending;
-        const Icon = badge.icon;
-
+    const renderStatus = (status: string) => {
+        const meta = STATUS_META[status as SessionStatus] || STATUS_META.pending;
         return (
-            <span
-                className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs font-medium ${badge.className} flex items-center gap-1.5 whitespace-nowrap`}>
-        <Icon className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0"/>
-                {badge.text}
-      </span>
+            <span className="flex shrink-0 items-center gap-1.5 text-sm text-muted-foreground">
+                <span className={cn('size-2 rounded-full', meta.dotClass, meta.pulse && 'animate-pulse')}/>
+                {meta.text}
+            </span>
         );
     };
 
     if (isLoading) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-background to-muted p-4 sm:p-6 lg:p-8">
-                <div className="max-w-7xl mx-auto">
-                    <div className="text-center py-12">
-                        <div
-                            className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-                        <p className="text-muted-foreground mt-4">Lade Session...</p>
-                    </div>
+            <AppShell>
+                <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed px-3 py-12 text-sm text-muted-foreground">
+                    <Loader2 className="size-5 animate-spin"/>
+                    Lade Session...
                 </div>
-            </div>
+            </AppShell>
         );
     }
 
     if (error || !currentSession) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-background to-muted p-4 sm:p-6 lg:p-8">
-                <div className="max-w-7xl mx-auto">
-                    <div className="mb-6 sm:mb-8">
-                        <Button
-                            onClick={() => navigate('/dashboard')}
-                            variant="outline"
-                        >
-                            <ArrowLeft className="mr-2 h-4 w-4"/>
-                            Zurück zum Dashboard
-                        </Button>
-                    </div>
-                    <div className="p-4 sm:p-6 bg-red-50 border border-red-200 rounded-lg shadow-sm">
-                        <div className="flex items-start gap-2">
-                            <XCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5"/>
-                            <p className="text-sm text-red-800 break-words">
-                                {error || 'Session nicht gefunden'}
-                            </p>
-                        </div>
-                    </div>
+            <AppShell>
+                <Button
+                    onClick={() => navigate('/dashboard')}
+                    variant="ghost"
+                    size="sm"
+                    className="mb-6 text-muted-foreground"
+                >
+                    <ArrowLeft className="size-4"/>
+                    Zurück zum Dashboard
+                </Button>
+                <div className="flex items-start gap-2 rounded-lg bg-destructive/10 px-4 py-3 ring-1 ring-destructive/20">
+                    <XCircle className="mt-0.5 size-4 shrink-0 text-destructive"/>
+                    <p className="text-sm break-words text-destructive">
+                        {error || 'Session nicht gefunden'}
+                    </p>
                 </div>
-            </div>
+            </AppShell>
         );
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-background to-muted">
-            <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
-                {/* Header */}
-                <div className="mb-6 sm:mb-8">
-                    <Button
-                        onClick={() => navigate('/dashboard')}
-                        variant="outline"
-                        className="mb-4"
-                    >
-                        <ArrowLeft className="mr-2 h-4 w-4"/>
-                        Zurück zum Dashboard
-                    </Button>
+        <AppShell>
+            {/* Kopf */}
+            <Button
+                onClick={() => navigate('/dashboard')}
+                variant="ghost"
+                size="sm"
+                className="mb-4 text-muted-foreground"
+            >
+                <ArrowLeft className="size-4"/>
+                Zurück zum Dashboard
+            </Button>
 
-                    <div className="bg-card rounded-xl shadow-md p-4 sm:p-6 border border-border">
-                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
-                            <div className="flex-1 min-w-0">
-                                <h1 className="text-2xl sm:text-3xl font-bold mb-2 text-foreground break-words">
-                                    {formatSessionTitle(currentSession.created_at)}
-                                </h1>
-                                <p className="text-muted-foreground text-xs sm:text-sm break-all">
-                                    Session-ID: {currentSession.session_id}
-                                </p>
-                            </div>
-                            <div className="self-start">
-                                {getStatusBadge(currentSession.status)}
-                            </div>
-                        </div>
-                    </div>
+            <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                    <h1 className="break-words text-xl font-semibold tracking-tight sm:text-2xl">
+                        {formatSessionTitle(currentSession.created_at)}
+                    </h1>
+                    <p className="mt-1 truncate font-mono text-xs text-muted-foreground">
+                        {currentSession.session_id}
+                    </p>
                 </div>
+                {renderStatus(currentSession.status)}
+            </div>
 
-                {/* Progress für laufende Sessions */}
-                {isRunning && (
-                    <Card className="mb-6 sm:mb-8 border-blue-200 shadow-md">
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-                                <PlayCircle className="h-5 w-5 text-blue-600"/>
-                                Fortschritt
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <SessionProgress session={currentSession}/>
-                        </CardContent>
-                    </Card>
-                )}
+            {/* Progress für laufende Sessions */}
+            {isRunning && (
+                <Card className="mb-6 gap-0 overflow-hidden py-0">
+                    <CardHeader className="flex h-11 flex-row items-center gap-2 px-4 py-0">
+                        <Loader2 className="size-4 animate-spin text-muted-foreground"/>
+                        <CardTitle className="text-sm">Fortschritt</CardTitle>
+                    </CardHeader>
+                    <Separator/>
+                    <CardContent className="p-4">
+                        <SessionProgress session={currentSession}/>
+                    </CardContent>
+                </Card>
+            )}
 
-                {/* Fehler */}
-                {currentSession.status === 'failed' && (
-                    <div
-                        className="mb-6 sm:mb-8 p-3 sm:p-4 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg shadow-sm">
-                        <div className="flex items-start gap-2">
-                            <XCircle className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5"/>
-                            <div>
-                                <p className="text-sm font-medium text-red-800 dark:text-red-300">
-                                    {currentSession.progress?.error_code === 'DFB_CREDENTIALS_INVALID'
-                                        ? 'DFBnet-Login fehlgeschlagen'
-                                        : 'Generierung fehlgeschlagen'}
-                                </p>
-                                <p className="text-sm text-red-700 dark:text-red-400 mt-1">
-                                    {currentSession.progress?.error_message || 'Bei der Generierung ist ein Fehler aufgetreten.'}
-                                </p>
-                                {currentSession.progress?.error_code === 'DFB_CREDENTIALS_INVALID' && (
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="mt-3 text-red-700 border-red-300 hover:bg-red-100 dark:text-red-300 dark:border-red-700 dark:hover:bg-red-900/30"
-                                        onClick={() => navigate('/settings')}
-                                    >
-                                        Zu den Einstellungen
-                                    </Button>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* Datei-Liste */}
-                {currentSession.status === 'completed' && (
+            {/* Fehler */}
+            {currentSession.status === 'failed' && (
+                <div className="mb-6 flex items-start gap-2 rounded-lg bg-destructive/10 px-4 py-3 ring-1 ring-destructive/20">
+                    <XCircle className="mt-0.5 size-4 shrink-0 text-destructive"/>
                     <div>
-                        {isLoadingMatches ? (
-                            <div className="text-center py-12">
-                                <div
-                                    className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                                <p className="text-muted-foreground mt-4">Lade Spieldaten...</p>
-                            </div>
-                        ) : matches.length > 0 ? (
-                            <div>
-                                <h2 className="text-xl sm:text-2xl font-semibold mb-4 text-foreground flex items-center gap-2">
-                                    <FileText className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600 flex-shrink-0"/>
-                                    <span>Spiele ({matches.length})</span>
-                                </h2>
-                                <div className="space-y-3">
-                                    {matches.map((match, index) => {
-                                        // KORRIGIERT: Verwende nur _filename vom Backend
-                                        const filename = match._filename || `spiel_${index + 1}.docx`;
-
-                                        return (
-                                            <MatchCard
-                                                key={index}
-                                                match={match}
-                                                index={index}
-                                                filename={filename}
-                                                onDownload={handleDownloadFile}
-                                                downloadingFilename={downloadingFile}
-                                            />
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="text-center py-12 bg-card rounded-lg shadow border border-border">
-                                <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4"/>
-                                <p className="text-muted-foreground">
-                                    Keine Spieldaten gefunden.
-                                </p>
-                            </div>
+                        <p className="text-sm font-medium text-destructive">
+                            {currentSession.progress?.error_code === 'DFB_CREDENTIALS_INVALID'
+                                ? 'DFBnet-Login fehlgeschlagen'
+                                : 'Generierung fehlgeschlagen'}
+                        </p>
+                        <p className="mt-1 text-sm text-destructive/80">
+                            {currentSession.progress?.error_message || 'Bei der Generierung ist ein Fehler aufgetreten.'}
+                        </p>
+                        {currentSession.progress?.error_code === 'DFB_CREDENTIALS_INVALID' && (
+                            <Button
+                                variant="destructive"
+                                size="sm"
+                                className="mt-3"
+                                onClick={() => navigate('/settings')}
+                            >
+                                Zu den Einstellungen
+                            </Button>
                         )}
                     </div>
-                )}
+                </div>
+            )}
 
-                {/* Keine Dateien */}
-                {currentSession.status === 'completed' && currentSession.files.length === 0 && (
-                    <div className="text-center py-12 bg-card rounded-lg shadow border border-border">
-                        <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4"/>
-                        <p className="text-muted-foreground">
-                            Keine Dateien in dieser Session gefunden.
-                        </p>
-                    </div>
-                )}
-            </div>
-        </div>
+            {/* Datei-Liste */}
+            {currentSession.status === 'completed' && (
+                <div>
+                    {isLoadingMatches ? (
+                        <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed px-3 py-12 text-sm text-muted-foreground">
+                            <Loader2 className="size-5 animate-spin"/>
+                            Lade Spieldaten...
+                        </div>
+                    ) : matches.length > 0 ? (
+                        <div>
+                            <h2 className="mb-3 flex items-center gap-1.5 text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                                <FileText className="size-3.5"/>
+                                Spiele ({matches.length})
+                            </h2>
+                            <div className="space-y-3">
+                                {matches.map((match, index) => {
+                                    const filename = match._filename || `spiel_${index + 1}.docx`;
+
+                                    return (
+                                        <MatchCard
+                                            key={index}
+                                            match={match}
+                                            index={index}
+                                            filename={filename}
+                                            onDownload={handleDownloadFile}
+                                            downloadingFilename={downloadingFile}
+                                        />
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed px-3 py-12 text-center">
+                            <span className="grid size-14 place-items-center rounded-2xl border border-dashed bg-muted/30">
+                                <AlertCircle className="size-6 text-muted-foreground"/>
+                            </span>
+                            <p className="text-sm text-muted-foreground">
+                                Keine Spieldaten gefunden.
+                            </p>
+                        </div>
+                    )}
+                </div>
+            )}
+        </AppShell>
     );
 }

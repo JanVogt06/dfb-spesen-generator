@@ -36,20 +36,20 @@ export function MatchList({matches}: MatchListProps) {
 
     if (matches.length === 0) {
         return (
-            <div className="text-center py-12 bg-card rounded-lg shadow border border-border">
-                <Calendar className="h-16 w-16 text-muted-foreground/50 mx-auto mb-4"/>
-                <p className="text-muted-foreground font-medium mb-2">
-                    Noch keine Spiele
-                </p>
-                <p className="text-muted-foreground text-sm">
-                    Starte die erste Generierung mit dem Button oben!
+            <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed px-3 py-12 text-center">
+                <span className="grid size-14 place-items-center rounded-2xl border border-dashed bg-muted/30">
+                    <Calendar className="size-6 text-muted-foreground"/>
+                </span>
+                <p className="text-sm font-medium">Noch keine Spiele</p>
+                <p className="max-w-xs text-sm text-muted-foreground">
+                    Starte die erste Generierung mit dem Button oben.
                 </p>
             </div>
         );
     }
 
     return (
-        <div className="space-y-4">
+        <div className="space-y-3">
             {matches.map((match, index) => {
                 // KORRIGIERT: Verwende _filename vom Backend!
                 const filename = match._filename || `spiel_${index + 1}.docx`;

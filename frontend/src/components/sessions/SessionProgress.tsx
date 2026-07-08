@@ -9,10 +9,10 @@ export function SessionProgress({session}: SessionProgressProps) {
 
     if (!progress) {
         return (
-            <div className="space-y-2">
-                <div className="text-sm text-muted-foreground">Initialisierung...</div>
-                <div className="w-full bg-muted rounded-full h-2">
-                    <div className="bg-primary h-2 rounded-full animate-pulse" style={{width: '10%'}}/>
+            <div className="space-y-1.5">
+                <div className="text-xs text-muted-foreground">Initialisierung...</div>
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                    <div className="h-full animate-pulse rounded-full bg-primary" style={{width: '10%'}}/>
                 </div>
             </div>
         );
@@ -23,21 +23,18 @@ export function SessionProgress({session}: SessionProgressProps) {
         : 0;
 
     return (
-        <div className="space-y-2">
-            <div className="flex justify-between text-sm">
+        <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-xs">
                 <span className="text-muted-foreground">{progress.step}</span>
-                <span className="text-foreground font-medium">
-          {progress.current} / {progress.total}
-        </span>
+                <span className="font-mono font-medium">
+                    {progress.current}/{progress.total}
+                </span>
             </div>
-            <div className="w-full bg-muted rounded-full h-2">
+            <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
                 <div
-                    className="bg-primary h-2 rounded-full transition-all duration-300"
+                    className="h-full rounded-full bg-primary transition-all duration-300"
                     style={{width: `${percentage}%`}}
                 />
-            </div>
-            <div className="text-xs text-muted-foreground text-right">
-                {percentage}%
             </div>
         </div>
     );

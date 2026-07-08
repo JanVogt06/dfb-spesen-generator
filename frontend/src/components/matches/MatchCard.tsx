@@ -1,6 +1,7 @@
 import {useState} from 'react';
 import type {MatchData} from '@/lib/matches';
 import {Card, CardContent, CardHeader, CardTitle} from '@/components/ui/card';
+import {Separator} from '@/components/ui/separator';
 import {Button} from '@/components/ui/button';
 import {Calendar, ChevronDown, ChevronUp, Download, Users, MapPin, Euro} from 'lucide-react';
 
@@ -28,7 +29,7 @@ export function MatchCard({match, index, filename, onDownload, downloadingFilena
 
     const getMatchTitle = () => {
         if (match.spiel_info?.heim_team && match.spiel_info?.gast_team) {
-            return `${match.spiel_info.heim_team} - ${match.spiel_info.gast_team}`;
+            return `${match.spiel_info.heim_team} – ${match.spiel_info.gast_team}`;
         }
         return `Spiel ${index + 1}`;
     };
@@ -127,6 +128,9 @@ export function MatchCard({match, index, filename, onDownload, downloadingFilena
         return fieldNames[key] || key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ');
     };
 
+    const sectionHeaderClass = 'flex items-center gap-1.5 text-xs font-medium tracking-wide text-muted-foreground uppercase';
+    const fieldRowClass = 'grid grid-cols-[110px_1fr] gap-2 sm:grid-cols-[130px_1fr]';
+
     const renderSpielInfo = () => {
         if (!match.spiel_info || Object.keys(match.spiel_info).length === 0) {
             return null;
@@ -156,20 +160,18 @@ export function MatchCard({match, index, filename, onDownload, downloadingFilena
         });
 
         return (
-            <div>
-                <h4 className="font-medium text-foreground mb-2 flex items-center gap-1.5 text-sm sm:text-base">
-                    <Calendar className="h-4 w-4"/>
+            <div className="space-y-2">
+                <h4 className={sectionHeaderClass}>
+                    <Calendar className="size-3.5"/>
                     Spieldetails
                 </h4>
-                <div className="bg-muted p-3 rounded-lg">
-                    <div className="grid gap-2 text-xs sm:text-sm">
-                        {fieldsToShow.map(([key, value]) => (
-                            <div key={key} className="grid grid-cols-[100px_1fr] sm:grid-cols-[120px_1fr] gap-2">
-                                <span className="text-muted-foreground break-words">{formatFieldName(key)}:</span>
-                                <span className="text-foreground break-words">{value}</span>
-                            </div>
-                        ))}
-                    </div>
+                <div className="grid gap-1.5 rounded-lg border border-dashed p-3 text-sm">
+                    {fieldsToShow.map(([key, value]) => (
+                        <div key={key} className={fieldRowClass}>
+                            <span className="break-words text-muted-foreground">{formatFieldName(key)}</span>
+                            <span className="break-words">{value}</span>
+                        </div>
+                    ))}
                 </div>
             </div>
         );
@@ -191,33 +193,31 @@ export function MatchCard({match, index, filename, onDownload, downloadingFilena
         const hasSRA = match.schiedsrichter?.some(sr => sr.rolle?.startsWith('SRA'));
 
         return (
-            <div className="border-t pt-4">
-                <h4 className="font-medium text-foreground mb-2 flex items-center gap-1.5 text-sm sm:text-base">
-                    <Euro className="h-4 w-4"/>
+            <div className="space-y-2">
+                <h4 className={sectionHeaderClass}>
+                    <Euro className="size-3.5"/>
                     Spesen (TFV-Spesenordnung)
                 </h4>
-                <div className="bg-muted p-3 rounded-lg">
-                    {spesen.sr_formatted ? (
-                        <div className="grid gap-2 text-xs sm:text-sm">
-                            <div className="grid grid-cols-[100px_1fr] sm:grid-cols-[120px_1fr] gap-2">
-                                <span className="text-muted-foreground">SR:</span>
-                                <span className="text-foreground font-medium">{spesen.sr_formatted}</span>
-                            </div>
-                            {spesen.sra_formatted && hasSRA && (
-                                <div className="grid grid-cols-[100px_1fr] sm:grid-cols-[120px_1fr] gap-2">
-                                    <span className="text-muted-foreground">SRA:</span>
-                                    <span className="text-foreground font-medium">{spesen.sra_formatted}</span>
-                                </div>
-                            )}
+                {spesen.sr_formatted ? (
+                    <div className="grid gap-1.5 rounded-lg border border-dashed p-3 text-sm">
+                        <div className={fieldRowClass}>
+                            <span className="text-muted-foreground">SR</span>
+                            <span className="font-mono font-medium">{spesen.sr_formatted}</span>
                         </div>
-                    ) : (
-                        spesen.hinweis && (
-                            <p className="text-xs sm:text-sm text-muted-foreground italic">
-                                {spesen.hinweis}
-                            </p>
-                        )
-                    )}
-                </div>
+                        {spesen.sra_formatted && hasSRA && (
+                            <div className={fieldRowClass}>
+                                <span className="text-muted-foreground">SRA</span>
+                                <span className="font-mono font-medium">{spesen.sra_formatted}</span>
+                            </div>
+                        )}
+                    </div>
+                ) : (
+                    spesen.hinweis && (
+                        <p className="rounded-lg border border-dashed p-3 text-sm italic text-muted-foreground">
+                            {spesen.hinweis}
+                        </p>
+                    )
+                )}
             </div>
         );
     };
@@ -228,26 +228,22 @@ export function MatchCard({match, index, filename, onDownload, downloadingFilena
         }
 
         return (
-            <div className="border-t pt-4">
-                <h4 className="font-medium text-foreground mb-2 flex items-center gap-1.5 text-sm sm:text-base">
-                    <Users className="h-4 w-4"/>
+            <div className="space-y-2">
+                <h4 className={sectionHeaderClass}>
+                    <Users className="size-3.5"/>
                     Schiedsrichter
                 </h4>
                 <div className="space-y-3">
                     {match.schiedsrichter.map((sr, idx) => (
-                        <div key={idx} className="bg-muted p-3 rounded-lg">
-                            <div className="grid gap-2 text-xs sm:text-sm">
-                                {Object.entries(sr)
-                                    .filter(([_, value]) => value)
-                                    .map(([key, value]) => (
-                                        <div key={key}
-                                             className="grid grid-cols-[100px_1fr] sm:grid-cols-[120px_1fr] gap-2">
-                                            <span
-                                                className="text-muted-foreground break-words">{formatFieldName(key)}:</span>
-                                            <span className="text-foreground break-words">{value}</span>
-                                        </div>
-                                    ))}
-                            </div>
+                        <div key={idx} className="grid gap-1.5 rounded-lg border border-dashed p-3 text-sm">
+                            {Object.entries(sr)
+                                .filter(([_, value]) => value)
+                                .map(([key, value]) => (
+                                    <div key={key} className={fieldRowClass}>
+                                        <span className="break-words text-muted-foreground">{formatFieldName(key)}</span>
+                                        <span className="break-words">{value}</span>
+                                    </div>
+                                ))}
                         </div>
                     ))}
                 </div>
@@ -267,20 +263,18 @@ export function MatchCard({match, index, filename, onDownload, downloadingFilena
         }
 
         return (
-            <div className="border-t pt-4">
-                <h4 className="font-medium text-foreground mb-2 flex items-center gap-1.5 text-sm sm:text-base">
-                    <MapPin className="h-4 w-4"/>
+            <div className="space-y-2">
+                <h4 className={sectionHeaderClass}>
+                    <MapPin className="size-3.5"/>
                     Spielstätte
                 </h4>
-                <div className="bg-muted p-3 rounded-lg">
-                    <div className="grid gap-2 text-xs sm:text-sm">
-                        {fieldsToShow.map(([key, value]) => (
-                            <div key={key} className="grid grid-cols-[100px_1fr] sm:grid-cols-[120px_1fr] gap-2">
-                                <span className="text-muted-foreground break-words">{formatFieldName(key)}:</span>
-                                <span className="text-foreground break-words">{value}</span>
-                            </div>
-                        ))}
-                    </div>
+                <div className="grid gap-1.5 rounded-lg border border-dashed p-3 text-sm">
+                    {fieldsToShow.map(([key, value]) => (
+                        <div key={key} className={fieldRowClass}>
+                            <span className="break-words text-muted-foreground">{formatFieldName(key)}</span>
+                            <span className="break-words">{value}</span>
+                        </div>
+                    ))}
                 </div>
             </div>
         );
@@ -295,26 +289,26 @@ export function MatchCard({match, index, filename, onDownload, downloadingFilena
         const hasSRA = match.schiedsrichter?.some(sr => sr.rolle?.startsWith('SRA'));
 
         return (
-            <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full whitespace-nowrap">
-        SR: {spesen.sr_formatted}
-                {spesen.sra_formatted && hasSRA && ` | SRA: ${spesen.sra_formatted}`}
-      </span>
+            <span className="whitespace-nowrap font-mono text-xs text-muted-foreground">
+                SR {spesen.sr_formatted}
+                {spesen.sra_formatted && hasSRA && ` · SRA ${spesen.sra_formatted}`}
+            </span>
         );
     };
 
     return (
-        <Card className="hover:shadow-lg transition-all duration-200 border-border">
-            <CardHeader className="pb-3">
-                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
-                    <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap mb-1">
-                            <CardTitle className="text-base sm:text-lg break-words">
+        <Card className="gap-0 overflow-hidden py-0 transition-all hover:ring-foreground/20">
+            <CardHeader className="px-4 py-3">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0 flex-1">
+                        <div className="mb-1 flex flex-wrap items-center gap-2">
+                            <CardTitle className="break-words text-sm sm:text-base">
                                 {getMatchTitle()}
                             </CardTitle>
                             {renderHeaderSpesen()}
                         </div>
-                        <p className="text-xs sm:text-sm text-muted-foreground flex items-center gap-1.5 break-words">
-                            <Calendar className="h-3.5 w-3.5 flex-shrink-0"/>
+                        <p className="flex items-center gap-1.5 break-words text-xs text-muted-foreground sm:text-sm">
+                            <Calendar className="size-3.5 shrink-0"/>
                             {getMatchSubtitle()}
                         </p>
                     </div>
@@ -323,9 +317,10 @@ export function MatchCard({match, index, filename, onDownload, downloadingFilena
                             onClick={() => onDownload(filename)}
                             disabled={downloadingFilename === filename}
                             size="sm"
+                            variant="outline"
                             className="whitespace-nowrap"
                         >
-                            <Download className="mr-1.5 h-3.5 w-3.5"/>
+                            <Download className="size-3.5"/>
                             {downloadingFilename === filename ? 'Lade...' : 'DOCX'}
                         </Button>
                         {match._pdf_available && (
@@ -336,19 +331,20 @@ export function MatchCard({match, index, filename, onDownload, downloadingFilena
                                 size="sm"
                                 className="whitespace-nowrap"
                             >
-                                <Download className="mr-1.5 h-3.5 w-3.5"/>
+                                <Download className="size-3.5"/>
                                 {downloadingFilename === pdfFilename ? 'Lade...' : 'PDF'}
                             </Button>
                         )}
                         <Button
                             onClick={() => setIsExpanded(!isExpanded)}
-                            variant="outline"
-                            size="sm"
+                            variant="ghost"
+                            size="icon-sm"
+                            aria-label={isExpanded ? 'Details einklappen' : 'Details ausklappen'}
                         >
                             {isExpanded ? (
-                                <ChevronUp className="h-4 w-4"/>
+                                <ChevronUp className="size-4"/>
                             ) : (
-                                <ChevronDown className="h-4 w-4"/>
+                                <ChevronDown className="size-4"/>
                             )}
                         </Button>
                     </div>
@@ -356,12 +352,15 @@ export function MatchCard({match, index, filename, onDownload, downloadingFilena
             </CardHeader>
 
             {isExpanded && (
-                <CardContent className="pt-0 space-y-4">
-                    {renderSpielInfo()}
-                    {renderSpesen()}
-                    {renderSchiedsrichter()}
-                    {renderSpielstaette()}
-                </CardContent>
+                <>
+                    <Separator/>
+                    <CardContent className="space-y-5 p-4">
+                        {renderSpielInfo()}
+                        {renderSpesen()}
+                        {renderSchiedsrichter()}
+                        {renderSpielstaette()}
+                    </CardContent>
+                </>
             )}
         </Card>
     );

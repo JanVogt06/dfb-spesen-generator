@@ -1,5 +1,4 @@
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from '@/components/ui/card';
-import {Button} from '@/components/ui/button';
 import {useTheme} from '@/components/ThemeProvider';
 import {Sun, Moon, Monitor} from 'lucide-react';
 
@@ -13,10 +12,10 @@ export function ThemeCard() {
     ];
 
     return (
-        <Card className="w-full max-w-md mx-4 sm:mx-0">
+        <Card className="w-full">
             <CardHeader className="px-4 sm:px-6">
-                <CardTitle className="text-xl sm:text-2xl flex items-center gap-2">
-                    {theme === 'dark' ? <Moon className="h-5 w-5"/> : <Sun className="h-5 w-5"/>}
+                <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+                    {theme === 'dark' ? <Moon className="size-4"/> : <Sun className="size-4"/>}
                     Erscheinungsbild
                 </CardTitle>
                 <CardDescription className="text-sm">
@@ -24,17 +23,20 @@ export function ThemeCard() {
                 </CardDescription>
             </CardHeader>
             <CardContent className="px-4 sm:px-6">
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-3 gap-1 rounded-lg border border-dashed p-1">
                     {options.map(({value, label, icon: Icon}) => (
-                        <Button
+                        <button
                             key={value}
-                            variant={theme === value ? 'default' : 'outline'}
-                            className="flex flex-col items-center gap-1 h-auto py-3"
                             onClick={() => setTheme(value)}
+                            className={`flex flex-col items-center gap-1 rounded-md px-2 py-2.5 text-xs font-medium transition-all ${
+                                theme === value
+                                    ? 'bg-primary/10 text-primary'
+                                    : 'text-muted-foreground hover:text-foreground'
+                            }`}
                         >
-                            <Icon className="h-5 w-5"/>
-                            <span className="text-xs">{label}</span>
-                        </Button>
+                            <Icon className="size-4"/>
+                            {label}
+                        </button>
                     ))}
                 </div>
 

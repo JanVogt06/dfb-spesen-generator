@@ -47,7 +47,7 @@ export function RegisterForm() {
     return (
         <Card className="w-full max-w-md mx-4 sm:mx-0">
             <CardHeader className="px-4 sm:px-6">
-                <CardTitle className="text-xl sm:text-2xl">Registrieren</CardTitle>
+                <CardTitle className="text-lg sm:text-xl">Registrieren</CardTitle>
                 <CardDescription className="text-sm">
                     Erstelle einen neuen TFV Spesen Generator Account
                 </CardDescription>
@@ -100,7 +100,7 @@ export function RegisterForm() {
                     </div>
 
                     {error && (
-                        <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+                        <div className="rounded-lg bg-destructive/10 px-3 py-2 ring-1 ring-destructive/20">
                             <div className="flex items-start gap-2">
                                 <AlertCircle className="h-4 w-4 text-destructive flex-shrink-0 mt-0.5"/>
                                 <p className="text-sm text-destructive break-words">
