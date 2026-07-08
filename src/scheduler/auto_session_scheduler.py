@@ -116,79 +116,82 @@ class AutoSessionScheduler:
         """Initialisiert den Scheduler"""
         self.scheduler = AsyncIOScheduler()
         self.session_manager = SessionManager()
-        self.max_concurrent = 4
-        self.semaphore = asyncio.Semaphore(self.max_concurrent)
-        logger.info(f"AutoSessionScheduler initialisiert (max {self.max_concurrent} gleichzeitige Sessions)")
+        self._is_running = False
+        logger.info("AutoSessionScheduler initialisiert (sequenziell, ein User nach dem anderen)")
 
     async def process_user_session(self, user: Dict[str, Any]) -> Dict[str, Any]:
         """
         Startet Session-Erstellung für einen User in einem separaten Prozess.
         """
-        async with self.semaphore:
-            user_id = user['id']
-            email = user['email']
+        user_id = user['id']
+        email = user['email']
 
-            try:
-                logger.info(f"[User {user_id}] Starte Session für {email}")
+        try:
+            logger.info(f"[User {user_id}] Starte Session für {email}")
 
-                # 1. DFB Credentials holen
-                credentials = get_dfb_credentials(user_id)
-                if not credentials:
-                    logger.warning(f"[User {user_id}] Keine DFB-Credentials - überspringe")
-                    return {
-                        "user_id": user_id,
-                        "email": email,
-                        "success": False,
-                        "reason": "no_credentials"
-                    }
-
-                # Credentials entschlüsseln
-                dfb_username = decrypt_credential(credentials['dfb_username_encrypted'])
-                dfb_password = decrypt_credential(credentials['dfb_password_encrypted'])
-
-                # 2. Session erstellen
-                session_path = self.session_manager.create_session()
-                session_id = session_path.name
-
-                # In DB speichern
-                db_create_session(session_id, user_id)
-
-                logger.info(f"[User {user_id}] Session erstellt: {session_id}")
-
-                # 3. Generierung in separatem Prozess starten
-                # Credentials werden direkt als Parameter übergeben (nicht über ENV!)
-                process = multiprocessing.Process(
-                    target=run_generation_for_user,
-                    args=(user_id, email, dfb_username, dfb_password, session_path, session_id),
-                    daemon=True
-                )
-                process.start()
-
-                # Warte bis Prozess fertig ist (für max_concurrent Limitierung)
-                await asyncio.get_event_loop().run_in_executor(None, process.join)
-
-                logger.info(f"[User {user_id}] Prozess abgeschlossen")
-
-                return {
-                    "user_id": user_id,
-                    "email": email,
-                    "success": True,
-                    "session_id": session_id
-                }
-
-            except Exception as e:
-                logger.error(f"[User {user_id}] Fehler: {e}", exc_info=True)
+            # 1. DFB Credentials holen
+            credentials = get_dfb_credentials(user_id)
+            if not credentials:
+                logger.warning(f"[User {user_id}] Keine DFB-Credentials - überspringe")
                 return {
                     "user_id": user_id,
                     "email": email,
                     "success": False,
-                    "reason": str(e)
+                    "reason": "no_credentials"
                 }
+
+            # Credentials entschlüsseln
+            dfb_username = decrypt_credential(credentials['dfb_username_encrypted'])
+            dfb_password = decrypt_credential(credentials['dfb_password_encrypted'])
+
+            # 2. Session erstellen
+            session_path = self.session_manager.create_session()
+            session_id = session_path.name
+
+            # In DB speichern
+            db_create_session(session_id, user_id)
+
+            logger.info(f"[User {user_id}] Session erstellt: {session_id}")
+
+            # 3. Generierung in separatem Prozess starten
+            # Credentials werden direkt als Parameter übergeben (nicht über ENV!)
+            process = multiprocessing.Process(
+                target=run_generation_for_user,
+                args=(user_id, email, dfb_username, dfb_password, session_path, session_id),
+                daemon=True
+            )
+            process.start()
+
+            # Warte bis Prozess fertig ist, bevor der naechste User drankommt
+            await asyncio.get_event_loop().run_in_executor(None, process.join)
+
+            logger.info(f"[User {user_id}] Prozess abgeschlossen")
+
+            return {
+                "user_id": user_id,
+                "email": email,
+                "success": True,
+                "session_id": session_id
+            }
+
+        except Exception as e:
+            logger.error(f"[User {user_id}] Fehler: {e}", exc_info=True)
+            return {
+                "user_id": user_id,
+                "email": email,
+                "success": False,
+                "reason": str(e)
+            }
 
     async def create_sessions_for_all_users(self):
         """
         Erstellt Sessions für alle User (wird um 3 Uhr ausgeführt).
         """
+        if self._is_running:
+            logger.warning("Session-Erstellung läuft bereits - überspringe doppelten Aufruf")
+            return
+
+        self._is_running = True
         logger.info("=" * 80)
         logger.info("AUTOMATISCHE SESSION-ERSTELLUNG GESTARTET")
         logger.info(f"Zeitpunkt: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
@@ -202,7 +205,7 @@ class AutoSessionScheduler:
                 logger.info("Keine User gefunden")
                 return
 
-            # Verarbeite alle User sequenziell (das Semaphore limitiert auf max_concurrent)
+            # Verarbeite alle User sequenziell, einen nach dem anderen
             results = []
             for user in users:
                 result = await self.process_user_session(user)
@@ -221,6 +224,8 @@ class AutoSessionScheduler:
 
         except Exception as e:
             logger.error(f"Kritischer Fehler: {e}", exc_info=True)
+        finally:
+            self._is_running = False
 
     def start(self):
         """Startet den Scheduler"""

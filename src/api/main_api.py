@@ -450,6 +450,7 @@ async def get_all_user_matches(current_user: dict = Depends(get_current_user)):
                         match['_datum'] = datum
                         match['_created_at'] = db_session['created_at']
                         match['_filename'] = filename
+                        match['_pdf_available'] = file_path.with_suffix('.pdf').exists()
                         # Spesen hinzufügen
                         _add_spesen_to_match(match)
                         all_matches_dict[key] = match
@@ -551,6 +552,7 @@ async def get_session_matches(
             filename = generate_filename_from_match(match)
             match['_filename'] = filename
             match['_session_id'] = session_id
+            match['_pdf_available'] = (session_path / filename).with_suffix('.pdf').exists()
             # Spesen hinzufügen
             _add_spesen_to_match(match)
 
@@ -694,6 +696,8 @@ async def download_file(
 
     if filename.endswith('.docx'):
         media_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    elif filename.endswith('.pdf'):
+        media_type = "application/pdf"
     elif filename.endswith('.json'):
         media_type = "application/json"
     else:

@@ -12,6 +12,7 @@ from scraper.dfb_scraper import DFBScraper
 from generator.docx_generator import SpesenGenerator
 from utils.session_manager import SessionManager
 from utils.logger import setup_logger
+from utils.pdf_converter import convert_docx_files_to_pdf
 
 # Lade .env Datei
 env_path = Path(__file__).parent.parent / ".env"
@@ -152,6 +153,13 @@ def generate_documents_in_session(matches_data: List[dict], session_path: Path) 
         except Exception as e:
             logger.error(f"Fehler bei Dokument {i}: {e}")
             continue
+
+    # PDF-Versionen aller Dokumente in einem Batch-Aufruf erzeugen (best-effort)
+    if generated_files:
+        try:
+            convert_docx_files_to_pdf(generated_files)
+        except Exception as e:
+            logger.error(f"PDF-Konvertierung fehlgeschlagen: {e}")
 
     # Session-Metadata aktualisieren
     session_mgr.update_session_metadata(

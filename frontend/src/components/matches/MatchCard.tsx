@@ -19,11 +19,12 @@ interface MatchCardProps {
     index: number;
     filename: string;
     onDownload: (filename: string) => void;
-    isDownloading: boolean;
+    downloadingFilename: string | null;
 }
 
-export function MatchCard({match, index, filename, onDownload, isDownloading}: MatchCardProps) {
+export function MatchCard({match, index, filename, onDownload, downloadingFilename}: MatchCardProps) {
     const [isExpanded, setIsExpanded] = useState(false);
+    const pdfFilename = filename.replace(/\.docx$/i, '.pdf');
 
     const getMatchTitle = () => {
         if (match.spiel_info?.heim_team && match.spiel_info?.gast_team) {
@@ -320,13 +321,25 @@ export function MatchCard({match, index, filename, onDownload, isDownloading}: M
                     <div className="flex gap-2 self-start">
                         <Button
                             onClick={() => onDownload(filename)}
-                            disabled={isDownloading}
+                            disabled={downloadingFilename === filename}
                             size="sm"
                             className="whitespace-nowrap"
                         >
                             <Download className="mr-1.5 h-3.5 w-3.5"/>
-                            {isDownloading ? 'Lade...' : 'Download'}
+                            {downloadingFilename === filename ? 'Lade...' : 'DOCX'}
                         </Button>
+                        {match._pdf_available && (
+                            <Button
+                                onClick={() => onDownload(pdfFilename)}
+                                disabled={downloadingFilename === pdfFilename}
+                                variant="outline"
+                                size="sm"
+                                className="whitespace-nowrap"
+                            >
+                                <Download className="mr-1.5 h-3.5 w-3.5"/>
+                                {downloadingFilename === pdfFilename ? 'Lade...' : 'PDF'}
+                            </Button>
+                        )}
                         <Button
                             onClick={() => setIsExpanded(!isExpanded)}
                             variant="outline"

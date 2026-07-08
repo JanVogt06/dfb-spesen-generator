@@ -88,10 +88,7 @@ export function SessionDetailPage() {
                 responseType: 'blob',
             });
 
-            const blob = new Blob([response.data], {
-                type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-            });
-            const url = window.URL.createObjectURL(blob);
+            const url = window.URL.createObjectURL(response.data);
             const link = document.createElement('a');
             link.href = url;
             link.download = filename;
@@ -308,7 +305,7 @@ export function SessionDetailPage() {
                                                 index={index}
                                                 filename={filename}
                                                 onDownload={handleDownloadFile}
-                                                isDownloading={downloadingFile === filename}
+                                                downloadingFilename={downloadingFile}
                                             />
                                         );
                                     })}

@@ -12,11 +12,11 @@ COPY frontend/ ./
 RUN npm run build
 
 # ===== Backend Stage =====
-FROM python:3.13-slim
+FROM python:3.14
 
 WORKDIR /app
 
-# System-Dependencies für Playwright
+# System-Dependencies für Playwright + LibreOffice (DOCX->PDF Konvertierung)
 RUN apt-get update && apt-get install -y \
     wget \
     gnupg \
@@ -40,6 +40,7 @@ RUN apt-get update && apt-get install -y \
     libxkbcommon0 \
     libxrandr2 \
     xdg-utils \
+    libreoffice-writer \
     && rm -rf /var/lib/apt/lists/*
 
 # Python Dependencies installieren

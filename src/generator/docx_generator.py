@@ -18,6 +18,18 @@ CHECKBOX_UNCHECKED = '☐'  # U+2610 - Ballot Box (leer)
 CHECKBOX_FONT = 'Segoe UI Symbol'
 
 
+def format_name_nachname_vorname(name: str) -> str:
+    """
+    Wandelt einen gescrapten Namen im Format "Vorname Nachname" in das im
+    Formular erwartete Format "Nachname, Vorname" um.
+    Letztes Wort gilt als Nachname, der Rest als Vorname.
+    """
+    parts = name.strip().split()
+    if len(parts) < 2:
+        return name
+    return f"{parts[-1]}, {' '.join(parts[:-1])}"
+
+
 class SpesenGenerator:
     """Generiert ausgefüllte Spesenabrechnung-Dokumente"""
 
@@ -251,8 +263,7 @@ class SpesenGenerator:
 
         spielort_name = spielstaette.get('name', '')
         spielort_adresse = spielstaette.get('adresse', '')
-        spielort_typ = spielstaette.get('platz_typ', '')
-        spielort_komplett = f"{spielort_name}\n{spielort_adresse}\n{spielort_typ}"
+        spielort_komplett = f"{spielort_name}\n{spielort_adresse}"
 
         sra1_spesen = sra_spesen_str if sra1.get('name') else ''
         sra2_spesen = sra_spesen_str if sra2.get('name') else ''
@@ -265,13 +276,13 @@ class SpesenGenerator:
             'DATUM': datum,
             'ANSTOSS': anstoss,
             'SPIELORT': spielort_komplett,
-            'SR_NAME': sr.get('name', ''),
+            'SR_NAME': format_name_nachname_vorname(sr.get('name', '')),
             'SR_STRASSE': sr.get('strasse', ''),
             'SR_PLZ_ORT': sr.get('plz_ort', ''),
-            'SRA1_NAME': sra1.get('name', ''),
+            'SRA1_NAME': format_name_nachname_vorname(sra1.get('name', '')),
             'SRA1_STRASSE': sra1.get('strasse', ''),
             'SRA1_PLZ_ORT': sra1.get('plz_ort', ''),
-            'SRA2_NAME': sra2.get('name', ''),
+            'SRA2_NAME': format_name_nachname_vorname(sra2.get('name', '')),
             'SRA2_STRASSE': sra2.get('strasse', ''),
             'SRA2_PLZ_ORT': sra2.get('plz_ort', ''),
             'SR_Spesen': sr_spesen_str,

@@ -41,6 +41,7 @@ export interface MatchData {
     _datum?: string;
     _created_at?: string;
     _filename?: string;  // NEU: Echter Dateiname für Downloads
+    _pdf_available?: boolean;
 }
 
 // API Funktionen
