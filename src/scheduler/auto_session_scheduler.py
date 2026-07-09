@@ -94,7 +94,7 @@ def run_generation_for_user(
         db_update_session_status(session_id, "generating")
 
         # === NUTZE DIE BESTEHENDE FUNKTION AUS MAIN.PY ===
-        generate_documents_in_session(matches_data, session_path)
+        generate_documents_in_session(matches_data, session_path, user_id)
 
         # Status: Abgeschlossen
         sm.update_session_metadata(session_path, status="completed")

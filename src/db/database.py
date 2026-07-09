@@ -64,6 +64,26 @@ def init_database():
         )
     """)
 
+    # Tabelle: match_expenses (Fahrtkosten/OeVM pro Spiel, ueberlebt Neu-Scrapes)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS match_expenses (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            heim_team TEXT NOT NULL,
+            gast_team TEXT NOT NULL,
+            datum TEXT NOT NULL,
+            sr_km REAL,
+            sr_oevm REAL,
+            sra1_km REAL,
+            sra1_oevm REAL,
+            sra2_km REAL,
+            sra2_oevm REAL,
+            updated_at TEXT NOT NULL,
+            UNIQUE (user_id, heim_team, gast_team, datum),
+            FOREIGN KEY (user_id) REFERENCES users (id)
+        )
+    """)
+
     conn.commit()
     conn.close()
 
@@ -299,3 +319,71 @@ def get_session_by_id(session_id: str) -> Optional[Dict]:
     if session:
         return dict(session)
     return None
+
+
+# ===== MATCH EXPENSES FUNKTIONEN =====
+
+def upsert_match_expenses(user_id: int, heim_team: str, gast_team: str, datum: str,
+                          expenses: Dict) -> None:
+    """
+    Speichert/aktualisiert Fahrtkosten (km) und OeVM fuer ein Spiel.
+
+    Args:
+        expenses: Dict mit optionalen Keys sr_km, sr_oevm, sra1_km, sra1_oevm, sra2_km, sra2_oevm
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        INSERT INTO match_expenses
+            (user_id, heim_team, gast_team, datum,
+             sr_km, sr_oevm, sra1_km, sra1_oevm, sra2_km, sra2_oevm, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT (user_id, heim_team, gast_team, datum) DO UPDATE SET
+            sr_km = excluded.sr_km,
+            sr_oevm = excluded.sr_oevm,
+            sra1_km = excluded.sra1_km,
+            sra1_oevm = excluded.sra1_oevm,
+            sra2_km = excluded.sra2_km,
+            sra2_oevm = excluded.sra2_oevm,
+            updated_at = excluded.updated_at
+    """, (
+        user_id, heim_team, gast_team, datum,
+        expenses.get('sr_km'), expenses.get('sr_oevm'),
+        expenses.get('sra1_km'), expenses.get('sra1_oevm'),
+        expenses.get('sra2_km'), expenses.get('sra2_oevm'),
+        datetime.now(UTC).isoformat(),
+    ))
+
+    conn.commit()
+    conn.close()
+
+
+def get_match_expenses(user_id: int, heim_team: str, gast_team: str, datum: str) -> Optional[Dict]:
+    """Laedt gespeicherte Fahrtkosten/OeVM fuer ein Spiel"""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT * FROM match_expenses
+        WHERE user_id = ? AND heim_team = ? AND gast_team = ? AND datum = ?
+    """, (user_id, heim_team, gast_team, datum))
+    row = cursor.fetchone()
+
+    conn.close()
+
+    if row:
+        return dict(row)
+    return None
+
+
+def get_all_match_expenses_for_user(user_id: int) -> List[Dict]:
+    """Laedt alle gespeicherten Fahrtkosten/OeVM eines Users"""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT * FROM match_expenses WHERE user_id = ?", (user_id,))
+    rows = [dict(row) for row in cursor.fetchall()]
+
+    conn.close()
+    return rows

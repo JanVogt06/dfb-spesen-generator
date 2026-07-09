@@ -1,9 +1,27 @@
 import {useState} from 'react';
-import type {MatchData} from '@/lib/matches';
+import type {MatchData, MatchExpenses} from '@/lib/matches';
+import {saveMatchExpenses} from '@/lib/matches';
 import {Card, CardContent, CardHeader, CardTitle} from '@/components/ui/card';
 import {Separator} from '@/components/ui/separator';
 import {Button} from '@/components/ui/button';
-import {Calendar, ChevronDown, ChevronUp, Download, Users, MapPin, Euro} from 'lucide-react';
+import {Input} from '@/components/ui/input';
+import {Calendar, ChevronDown, ChevronUp, Download, Users, MapPin, Euro, Car, Check, Loader2, Info} from 'lucide-react';
+
+/** "12,5" oder "12.5" -> 12.5; leer -> null; ungültig -> undefined */
+function parseGermanNumber(value: string): number | null | undefined {
+    const trimmed = value.trim();
+    if (trimmed === '') return null;
+    const num = Number(trimmed.replace(',', '.'));
+    return Number.isFinite(num) && num >= 0 ? num : undefined;
+}
+
+function formatEuro(value: number): string {
+    return value.toLocaleString('de-DE', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' €';
+}
+
+function toInputValue(value: number | null | undefined): string {
+    return value === null || value === undefined ? '' : String(value).replace('.', ',');
+}
 
 interface SpesenInfo {
     sr: number | null;
@@ -26,6 +44,57 @@ interface MatchCardProps {
 export function MatchCard({match, index, filename, onDownload, downloadingFilename}: MatchCardProps) {
     const [isExpanded, setIsExpanded] = useState(false);
     const pdfFilename = filename.replace(/\.docx$/i, '.pdf');
+
+    // Fahrtkosten/ÖVM-Eingaben (als Strings, deutsche Kommaeingabe erlaubt)
+    const [expenseInputs, setExpenseInputs] = useState<Record<string, string>>({
+        sr_km: toInputValue(match._expenses?.sr_km),
+        sr_oevm: toInputValue(match._expenses?.sr_oevm),
+        sra1_km: toInputValue(match._expenses?.sra1_km),
+        sra1_oevm: toInputValue(match._expenses?.sra1_oevm),
+        sra2_km: toInputValue(match._expenses?.sra2_km),
+        sra2_oevm: toInputValue(match._expenses?.sra2_oevm),
+    });
+    const [isSaving, setIsSaving] = useState(false);
+    const [saveMessage, setSaveMessage] = useState('');
+    const [saveError, setSaveError] = useState('');
+    const [pdfAvailable, setPdfAvailable] = useState(!!match._pdf_available);
+
+    const handleSaveExpenses = async () => {
+        const sessionId = match._session_id;
+        const datum = match._datum;
+        const heim = match.spiel_info?.heim_team;
+        const gast = match.spiel_info?.gast_team;
+        if (!sessionId || !datum || !heim || !gast) {
+            setSaveError('Spieldaten unvollständig, speichern nicht möglich.');
+            return;
+        }
+
+        // Eingaben parsen und validieren
+        const expenses: MatchExpenses = {};
+        for (const key of Object.keys(expenseInputs) as (keyof MatchExpenses)[]) {
+            const parsed = parseGermanNumber(expenseInputs[key]);
+            if (parsed === undefined) {
+                setSaveError('Bitte nur positive Zahlen eingeben (z.B. 42 oder 7,50).');
+                return;
+            }
+            expenses[key] = parsed;
+        }
+
+        setIsSaving(true);
+        setSaveError('');
+        setSaveMessage('');
+        try {
+            const result = await saveMatchExpenses(sessionId, heim, gast, datum, expenses);
+            setPdfAvailable(result.pdf_available);
+            setSaveMessage('Gespeichert – Dokument wurde neu generiert.');
+            setTimeout(() => setSaveMessage(''), 4000);
+        } catch (err) {
+            console.error('Fehler beim Speichern der Fahrtkosten:', err);
+            setSaveError('Speichern fehlgeschlagen. Bitte versuche es erneut.');
+        } finally {
+            setIsSaving(false);
+        }
+    };
 
     const getMatchTitle = () => {
         if (match.spiel_info?.heim_team && match.spiel_info?.gast_team) {
@@ -222,6 +291,103 @@ export function MatchCard({match, index, filename, onDownload, downloadingFilena
         );
     };
 
+    const renderExpenses = () => {
+        // Nur Rollen anzeigen, die tatsächlich angesetzt sind (SR immer)
+        const hasSRA1 = match.schiedsrichter?.some(sr => sr.rolle === 'SRA 1' && sr.name);
+        const hasSRA2 = match.schiedsrichter?.some(sr => sr.rolle === 'SRA 2' && sr.name);
+        const rows = [
+            {label: 'SR', kmKey: 'sr_km', oevmKey: 'sr_oevm'},
+            ...(hasSRA1 ? [{label: 'SRA 1', kmKey: 'sra1_km', oevmKey: 'sra1_oevm'}] : []),
+            ...(hasSRA2 ? [{label: 'SRA 2', kmKey: 'sra2_km', oevmKey: 'sra2_oevm'}] : []),
+        ];
+
+        // Eine Person gilt als erfasst, sobald km oder ÖVM eingetragen ist (auch 0)
+        const erfasstProZeile = rows.map(({kmKey, oevmKey}) =>
+            expenseInputs[kmKey].trim() !== '' || expenseInputs[oevmKey].trim() !== ''
+        );
+        const teilweiseErfasst = erfasstProZeile.some(Boolean) && !erfasstProZeile.every(Boolean);
+
+        return (
+            <div className="space-y-2">
+                <h4 className={sectionHeaderClass}>
+                    <Car className="size-3.5"/>
+                    Fahrtkosten & öffentliche VM
+                </h4>
+                <div className="space-y-3 rounded-lg border border-dashed p-3">
+                    <div className="grid grid-cols-[52px_1fr_1fr] gap-2 text-xs text-muted-foreground">
+                        <span/>
+                        <span>Kilometer</span>
+                        <span>Öffentliche VM (€)</span>
+                    </div>
+                    {rows.map(({label, kmKey, oevmKey}) => {
+                        const kmParsed = parseGermanNumber(expenseInputs[kmKey]);
+                        const kmCost = typeof kmParsed === 'number' ? kmParsed * 0.3 : null;
+
+                        return (
+                            <div key={label} className="grid grid-cols-[52px_1fr_1fr] items-start gap-2">
+                                <span className="pt-1.5 text-sm text-muted-foreground">{label}</span>
+                                <div>
+                                    <Input
+                                        value={expenseInputs[kmKey]}
+                                        onChange={(e) => setExpenseInputs(prev => ({...prev, [kmKey]: e.target.value}))}
+                                        placeholder="z.B. 42"
+                                        inputMode="decimal"
+                                        className="h-8 text-sm"
+                                    />
+                                    {kmCost !== null && (
+                                        <p className="mt-1 font-mono text-xs text-muted-foreground">
+                                            = {formatEuro(kmCost)}
+                                        </p>
+                                    )}
+                                </div>
+                                <Input
+                                    value={expenseInputs[oevmKey]}
+                                    onChange={(e) => setExpenseInputs(prev => ({...prev, [oevmKey]: e.target.value}))}
+                                    placeholder="z.B. 7,50"
+                                    inputMode="decimal"
+                                    className="h-8 text-sm"
+                                />
+                            </div>
+                        );
+                    })}
+                    <div className="flex flex-wrap items-center gap-3 pt-1">
+                        <Button size="sm" onClick={handleSaveExpenses} disabled={isSaving}>
+                            {isSaving ? (
+                                <>
+                                    <Loader2 className="size-3.5 animate-spin"/>
+                                    Speichert...
+                                </>
+                            ) : (
+                                'Speichern & neu generieren'
+                            )}
+                        </Button>
+                        {saveMessage && (
+                            <span className="flex items-center gap-1.5 text-xs text-success">
+                                <Check className="size-3.5"/>
+                                {saveMessage}
+                            </span>
+                        )}
+                        {saveError && (
+                            <span className="text-xs text-destructive">{saveError}</span>
+                        )}
+                    </div>
+                    {teilweiseErfasst && (
+                        <p className="flex items-start gap-1.5 rounded-lg bg-primary/10 px-3 py-2 text-xs text-primary">
+                            <Info className="mt-0.5 size-3.5 shrink-0"/>
+                            Die Gesamtsumme im Dokument wird erst berechnet, wenn für jede angesetzte
+                            Person etwas eingetragen ist. Trage 0 ein, wenn keine Kosten anfallen.
+                        </p>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                        Kilometer werden mit 0,30 € pro km abgerechnet, die Werte bleiben dauerhaft
+                        gespeichert. Für die Gesamtsumme muss bei jeder Person ein Wert stehen
+                        (0 eintragen, wenn keine Kosten anfallen).
+                    </p>
+                </div>
+            </div>
+        );
+    };
+
     const renderSchiedsrichter = () => {
         if (!match.schiedsrichter || match.schiedsrichter.length === 0) {
             return null;
@@ -323,7 +489,7 @@ export function MatchCard({match, index, filename, onDownload, downloadingFilena
                             <Download className="size-3.5"/>
                             {downloadingFilename === filename ? 'Lade...' : 'DOCX'}
                         </Button>
-                        {match._pdf_available && (
+                        {pdfAvailable && (
                             <Button
                                 onClick={() => onDownload(pdfFilename)}
                                 disabled={downloadingFilename === pdfFilename}
@@ -357,6 +523,7 @@ export function MatchCard({match, index, filename, onDownload, downloadingFilena
                     <CardContent className="space-y-5 p-4">
                         {renderSpielInfo()}
                         {renderSpesen()}
+                        {renderExpenses()}
                         {renderSchiedsrichter()}
                         {renderSpielstaette()}
                     </CardContent>

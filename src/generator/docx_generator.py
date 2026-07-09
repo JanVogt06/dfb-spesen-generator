@@ -7,10 +7,13 @@ from docx import Document
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
 from utils.logger import setup_logger
-from utils.match_utils import parse_anpfiff, generate_filename_from_match, sanitize_team_name
+from utils.match_utils import parse_anpfiff, generate_filename_from_match, sanitize_team_name, extract_iso_date_from_anpfiff
 from generator.spesen_calculator import calculate_spesen, format_spesen
 
 logger = setup_logger("docx_generator")
+
+# Kilometerpauschale laut Formular
+KM_SATZ_EURO = 0.30
 
 # Checkbox-Zeichen (beide Unicode, beide mit Segoe UI Symbol darstellbar)
 CHECKBOX_CHECKED = '☒'    # U+2612 - Ballot Box with X
@@ -242,8 +245,74 @@ class SpesenGenerator:
 
         return (sr_spesen_str, sra_spesen_str)
 
-    def generate_document(self, match_data: dict, output_filename: str = None) -> Path:
-        """Generiert ein ausgefülltes Dokument für ein Spiel."""
+    def _build_expense_replacements(self, expenses: dict, is_punktspiel: bool,
+                                    match_data: dict, sra1_active: bool, sra2_active: bool) -> dict:
+        """
+        Baut die Platzhalter fuer Fahrtkosten (km x 0,30 EUR), OeVM und die
+        Summen-Zeile (Spesen + Fahrtkosten + OeVM) pro Person.
+        """
+        expenses = expenses or {}
+
+        # Numerische Spesen fuer die Summenberechnung
+        sr_spesen_num, sra_spesen_num = (None, None)
+        if is_punktspiel:
+            spiel_info = match_data.get('spiel_info', {})
+            sr_spesen_num, sra_spesen_num = calculate_spesen(
+                spiel_info.get('spielklasse', ''), spiel_info.get('mannschaftsart', '')
+            )
+
+        replacements = {}
+        roles = [
+            ('SR', 'sr', sr_spesen_num, True),
+            ('SRA1', 'sra1', sra_spesen_num, sra1_active),
+            ('SRA2', 'sra2', sra_spesen_num, sra2_active),
+        ]
+
+        # Fuer die Gesamtsumme: alle angesetzten Personen muessen erfasst sein
+        # (eine explizite 0 zaehlt als erfasst, ein leeres Feld nicht)
+        alle_aktiven_erfasst = True
+        einzelsummen = []
+
+        for prefix, key, spesen_num, active in roles:
+            km = expenses.get(f'{key}_km')
+            oevm = expenses.get(f'{key}_oevm')
+
+            # 0 ist ein gueltiger Wert (bewusst erfasst), None = nicht eingetragen
+            km_kosten = round(km * KM_SATZ_EURO, 2) if km is not None else None
+            oevm_betrag = oevm if oevm is not None else None
+
+            # Anzeige: 0-Betraege bleiben im Formular leer
+            replacements[f'{prefix}_Kilometer'] = format_spesen(km_kosten) if km_kosten else ''
+            replacements[f'{prefix}_OEVM'] = format_spesen(oevm_betrag) if oevm_betrag else ''
+
+            # Summe nur, wenn die Person angesetzt ist und mindestens eine Komponente existiert
+            komponenten = [v for v in (spesen_num if active else None, km_kosten, oevm_betrag) if v is not None]
+            summe = round(sum(komponenten), 2) if komponenten and active else None
+            replacements[f'{prefix}_Summe'] = format_spesen(summe) if summe else ''
+
+            if active:
+                erfasst = km is not None or oevm is not None
+                if not erfasst:
+                    alle_aktiven_erfasst = False
+                elif summe is not None:
+                    einzelsummen.append(summe)
+
+        # Gesamtsumme ueber alle angesetzten Personen
+        if alle_aktiven_erfasst and einzelsummen:
+            replacements['Summe'] = format_spesen(round(sum(einzelsummen), 2))
+        else:
+            replacements['Summe'] = ''
+
+        return replacements
+
+    def generate_document(self, match_data: dict, output_filename: str = None, expenses: dict = None) -> Path:
+        """
+        Generiert ein ausgefülltes Dokument für ein Spiel.
+
+        Args:
+            expenses: Optionale Fahrtkosten/OeVM-Werte
+                      (Keys: sr_km, sr_oevm, sra1_km, sra1_oevm, sra2_km, sra2_oevm)
+        """
         spiel_info = match_data.get('spiel_info', {})
         schiedsrichter = match_data.get('schiedsrichter', [])
         spielstaette = match_data.get('spielstaette', {})
@@ -268,7 +337,13 @@ class SpesenGenerator:
         sra1_spesen = sra_spesen_str if sra1.get('name') else ''
         sra2_spesen = sra_spesen_str if sra2.get('name') else ''
 
+        expense_replacements = self._build_expense_replacements(
+            expenses, is_punktspiel, match_data,
+            sra1_active=bool(sra1.get('name')), sra2_active=bool(sra2.get('name'))
+        )
+
         text_replacements = {
+            **expense_replacements,
             'HEIM_TEAM': spiel_info.get('heim_team', ''),
             'GAST_TEAM': spiel_info.get('gast_team', ''),
             'SPIELKLASSE': spiel_info.get('spielklasse', ''),
@@ -301,17 +376,28 @@ class SpesenGenerator:
         logger.info(f"Dokument erstellt: {output_path}")
         return output_path
 
-    def generate_all_documents(self, matches_data: list) -> list:
-        """Generiert Dokumente für alle Spiele."""
+    def generate_all_documents(self, matches_data: list, expenses_map: dict = None) -> list:
+        """
+        Generiert Dokumente für alle Spiele.
+
+        Args:
+            expenses_map: Optionales Dict {(heim, gast, datum_iso): expenses}
+                          mit gespeicherten Fahrtkosten/OeVM pro Spiel.
+        """
         logger.info(f"Generiere {len(matches_data)} Dokumente...")
+        expenses_map = expenses_map or {}
 
         generated_files = []
         for i, match_data in enumerate(matches_data, 1):
             try:
-                heim = match_data.get('spiel_info', {}).get('heim_team', 'Unbekannt')
-                gast = match_data.get('spiel_info', {}).get('gast_team', 'Unbekannt')
+                spiel_info = match_data.get('spiel_info', {})
+                heim = spiel_info.get('heim_team', 'Unbekannt')
+                gast = spiel_info.get('gast_team', 'Unbekannt')
+                datum_iso = extract_iso_date_from_anpfiff(spiel_info.get('anpfiff', ''))
+                expenses = expenses_map.get((heim, gast, datum_iso))
+
                 logger.info(f"[{i}/{len(matches_data)}] Verarbeite: {heim} vs {gast}")
-                output_path = self.generate_document(match_data)
+                output_path = self.generate_document(match_data, expenses=expenses)
                 generated_files.append(output_path)
                 logger.info(f"[{i}/{len(matches_data)}] ✓ Erstellt")
             except Exception as e:

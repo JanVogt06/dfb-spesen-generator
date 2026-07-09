@@ -28,13 +28,18 @@ from main import scrape_matches_with_session, generate_documents_in_session
 from utils.session_manager import SessionManager
 from utils.logger import setup_logger
 from utils.match_utils import generate_filename_from_match, extract_iso_date_from_anpfiff
+from utils.pdf_converter import convert_docx_files_to_pdf
+from generator.docx_generator import SpesenGenerator
 from generator.spesen_calculator import calculate_spesen, format_spesen
 from db.database import (
     init_database,
     create_session as db_create_session,
     update_session_status as db_update_session_status,
     get_user_sessions,
-    get_session_by_id as db_get_session_by_id
+    get_session_by_id as db_get_session_by_id,
+    upsert_match_expenses,
+    get_match_expenses,
+    get_all_match_expenses_for_user
 )
 from api.auth import router as auth_router, get_current_user
 from core.errors import (
@@ -209,7 +214,8 @@ def run_generation_process(
         session_path: Path,
         session_id: str,
         dfb_username: str,
-        dfb_password: str
+        dfb_password: str,
+        user_id: int = None
 ):
     """
     Führt die Generierung in einem separaten Prozess aus.
@@ -248,7 +254,7 @@ def run_generation_process(
             )
             db_update_session_status(session_id, "generating")
 
-            generate_documents_in_session(matches_data, session_path)
+            generate_documents_in_session(matches_data, session_path, user_id)
 
             sm.update_session_metadata(session_path, status="completed")
             db_update_session_status(session_id, "completed")
@@ -334,7 +340,7 @@ async def generate_spesen(
     # Credentials werden direkt als Parameter übergeben (nicht über ENV!)
     process = multiprocessing.Process(
         target=run_generation_process,
-        args=(session_path, session_id, dfb_username, dfb_password),
+        args=(session_path, session_id, dfb_username, dfb_password, user_id),
         daemon=True
     )
     process.start()
@@ -401,6 +407,12 @@ async def get_all_user_matches(current_user: dict = Depends(get_current_user)):
         db_sessions = get_user_sessions(user_id)
         logger.info(f"Lade Matches für User {user_id}, {len(db_sessions)} Sessions gefunden")
 
+        # Gespeicherte Fahrtkosten/OeVM des Users
+        expenses_map = {
+            (e['heim_team'], e['gast_team'], e['datum']): e
+            for e in get_all_match_expenses_for_user(user_id)
+        }
+
         all_matches_dict = {}
 
         for db_session in db_sessions:
@@ -451,6 +463,7 @@ async def get_all_user_matches(current_user: dict = Depends(get_current_user)):
                         match['_created_at'] = db_session['created_at']
                         match['_filename'] = filename
                         match['_pdf_available'] = file_path.with_suffix('.pdf').exists()
+                        match['_expenses'] = expenses_map.get(key)
                         # Spesen hinzufügen
                         _add_spesen_to_match(match)
                         all_matches_dict[key] = match
@@ -471,6 +484,94 @@ async def get_all_user_matches(current_user: dict = Depends(get_current_user)):
         logger.error(f"Fehler beim Laden aller Matches: {e}")
         logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
+
+
+class MatchExpensesRequest(BaseModel):
+    session_id: str
+    heim_team: str
+    gast_team: str
+    datum: str  # ISO-Datum (YYYY-MM-DD)
+    sr_km: Optional[float] = None
+    sr_oevm: Optional[float] = None
+    sra1_km: Optional[float] = None
+    sra1_oevm: Optional[float] = None
+    sra2_km: Optional[float] = None
+    sra2_oevm: Optional[float] = None
+
+
+@app.post("/api/matches/expenses")
+async def save_match_expenses(
+        request: MatchExpensesRequest,
+        current_user: dict = Depends(get_current_user)
+):
+    """
+    Speichert Fahrtkosten (km) und OeVM fuer ein Spiel und generiert
+    das Dokument (DOCX + PDF) sofort neu.
+    """
+    user_id = current_user['id']
+
+    # Session pruefen
+    db_session = db_get_session_by_id(request.session_id)
+    if not db_session:
+        raise NotFoundError("Session nicht gefunden")
+    if db_session['user_id'] != user_id:
+        raise AuthorizationError("Diese Session gehört einem anderen User")
+
+    session_path = session_manager.get_session_by_id(request.session_id)
+    if not session_path:
+        raise NotFoundError("Session nicht gefunden")
+
+    # Werte validieren
+    expense_keys = ['sr_km', 'sr_oevm', 'sra1_km', 'sra1_oevm', 'sra2_km', 'sra2_oevm']
+    expenses = {key: getattr(request, key) for key in expense_keys}
+    for key, value in expenses.items():
+        if value is not None and (value < 0 or value > 99999):
+            raise HTTPException(status_code=400, detail=f"Ungültiger Wert für {key}")
+
+    # In DB speichern (ueberlebt naechtliche Neu-Scrapes)
+    upsert_match_expenses(user_id, request.heim_team, request.gast_team, request.datum, expenses)
+
+    # Match in den Session-Daten finden
+    data_file = session_path / "spesen_data.json"
+    if not data_file.exists():
+        raise NotFoundError("Spieldaten der Session nicht gefunden")
+
+    with open(data_file, 'r', encoding='utf-8') as f:
+        matches_data = json.load(f)
+
+    match = next(
+        (m for m in matches_data
+         if m.get('spiel_info', {}).get('heim_team') == request.heim_team
+         and m.get('spiel_info', {}).get('gast_team') == request.gast_team
+         and extract_iso_date_from_anpfiff(m.get('spiel_info', {}).get('anpfiff', '')) == request.datum),
+        None
+    )
+    if not match:
+        raise NotFoundError("Spiel in dieser Session nicht gefunden")
+
+    # Dokument sofort neu generieren
+    try:
+        template_path = Path(__file__).parent.parent / "data" / "Spesenabrechnung_Vorlage.docx"
+        generator = SpesenGenerator(template_path, session_path)
+        docx_path = generator.generate_document(match, expenses=expenses)
+    except Exception as e:
+        logger.error(f"Fehler beim Neu-Generieren des Dokuments: {e}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail="Dokument konnte nicht neu generiert werden")
+
+    # PDF neu erzeugen (best-effort)
+    pdf_available = False
+    try:
+        results = convert_docx_files_to_pdf([docx_path])
+        pdf_available = results.get(docx_path, False)
+    except Exception as e:
+        logger.error(f"PDF-Konvertierung fehlgeschlagen: {e}")
+
+    return {
+        "success": True,
+        "filename": docx_path.name,
+        "pdf_available": pdf_available,
+    }
 
 
 @app.get("/api/session/{session_id}", response_model=SessionResponse)
@@ -547,12 +648,25 @@ async def get_session_matches(
         with open(data_file, 'r', encoding='utf-8') as f:
             matches_data = json.load(f)
 
+        # Gespeicherte Fahrtkosten/OeVM des Users
+        expenses_map = {
+            (e['heim_team'], e['gast_team'], e['datum']): e
+            for e in get_all_match_expenses_for_user(user_id)
+        }
+
         # Füge Dateinamen und Spesen zu jedem Match hinzu
         for match in matches_data:
             filename = generate_filename_from_match(match)
+            spiel_info = match.get('spiel_info', {})
             match['_filename'] = filename
             match['_session_id'] = session_id
             match['_pdf_available'] = (session_path / filename).with_suffix('.pdf').exists()
+            match['_datum'] = extract_iso_date_from_anpfiff(spiel_info.get('anpfiff', ''))
+            match['_expenses'] = expenses_map.get((
+                spiel_info.get('heim_team', ''),
+                spiel_info.get('gast_team', ''),
+                match['_datum'],
+            ))
             # Spesen hinzufügen
             _add_spesen_to_match(match)
 

@@ -103,18 +103,31 @@ def scrape_matches_with_session(
         )
         raise
 
-def generate_documents_in_session(matches_data: List[dict], session_path: Path) -> List[Path]:
+def generate_documents_in_session(matches_data: List[dict], session_path: Path, user_id: int = None) -> List[Path]:
     """
     Generiert DOCX-Dokumente in einem Session-Ordner.
 
     Args:
         matches_data: Spieldaten
         session_path: Session-Ordner für Output
+        user_id: Optional - laedt gespeicherte Fahrtkosten/OeVM des Users
+                 und schreibt sie in die Dokumente
 
     Returns:
         Liste der generierten Dateipfade
     """
     logger.info("=== DFB Spesen Generator: Erstelle Dokumente ===")
+
+    # Gespeicherte Fahrtkosten/OeVM des Users laden
+    expenses_map = {}
+    if user_id is not None:
+        try:
+            from db.database import get_all_match_expenses_for_user
+            for entry in get_all_match_expenses_for_user(user_id):
+                key = (entry['heim_team'], entry['gast_team'], entry['datum'])
+                expenses_map[key] = entry
+        except Exception as e:
+            logger.error(f"Fehler beim Laden der Fahrtkosten: {e}")
 
     # Session Manager für Updates
     session_mgr = SessionManager()
@@ -134,9 +147,17 @@ def generate_documents_in_session(matches_data: List[dict], session_path: Path) 
     generator = SpesenGenerator(template_path, session_path)
     generated_files = []
 
+    from utils.match_utils import extract_iso_date_from_anpfiff
+
     for i, match_data in enumerate(matches_data, 1):
         try:
-            output_path = generator.generate_document(match_data)
+            spiel_info = match_data.get('spiel_info', {})
+            expenses = expenses_map.get((
+                spiel_info.get('heim_team', ''),
+                spiel_info.get('gast_team', ''),
+                extract_iso_date_from_anpfiff(spiel_info.get('anpfiff', '')),
+            ))
+            output_path = generator.generate_document(match_data, expenses=expenses)
             generated_files.append(output_path)
 
             # Update progress nach jedem Dokument
