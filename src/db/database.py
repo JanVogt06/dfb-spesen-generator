@@ -64,6 +64,29 @@ def init_database():
         )
     """)
 
+    # Tabelle: login_log (protokolliert erfolgreiche Logins fuer Nutzungsstatistik)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS login_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            logged_in_at TEXT NOT NULL,
+            FOREIGN KEY (user_id) REFERENCES users (id)
+        )
+    """)
+
+    # Tabelle: download_log (protokolliert Downloads fuer Nutzungsstatistik)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS download_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            session_id TEXT NOT NULL,
+            filename TEXT NOT NULL,
+            file_type TEXT NOT NULL,
+            downloaded_at TEXT NOT NULL,
+            FOREIGN KEY (user_id) REFERENCES users (id)
+        )
+    """)
+
     # Tabelle: match_expenses (Fahrtkosten/OeVM pro Spiel, ueberlebt Neu-Scrapes)
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS match_expenses (
@@ -319,6 +342,36 @@ def get_session_by_id(session_id: str) -> Optional[Dict]:
     if session:
         return dict(session)
     return None
+
+
+# ===== LOGIN LOG FUNKTIONEN =====
+
+def log_login(user_id: int) -> None:
+    """Protokolliert einen erfolgreichen Login (fuer Nutzungsstatistik)"""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute(
+        "INSERT INTO login_log (user_id, logged_in_at) VALUES (?, ?)",
+        (user_id, datetime.now(UTC).isoformat())
+    )
+
+    conn.commit()
+    conn.close()
+
+
+def log_download(user_id: int, session_id: str, filename: str, file_type: str) -> None:
+    """Protokolliert einen Download (fuer Nutzungsstatistik)"""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        INSERT INTO download_log (user_id, session_id, filename, file_type, downloaded_at)
+        VALUES (?, ?, ?, ?, ?)
+    """, (user_id, session_id, filename, file_type, datetime.now(UTC).isoformat()))
+
+    conn.commit()
+    conn.close()
 
 
 # ===== MATCH EXPENSES FUNKTIONEN =====

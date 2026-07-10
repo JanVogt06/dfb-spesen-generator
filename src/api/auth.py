@@ -11,7 +11,8 @@ from db.database import (
     get_user_by_id,
     update_dfb_credentials,
     get_dfb_credentials,
-    update_user_password
+    update_user_password,
+    log_login
 )
 from core.security import hash_password, verify_password, create_access_token, decode_access_token
 from core.encryption import encrypt_credential, decrypt_credential
@@ -162,6 +163,12 @@ async def login(request: LoginRequest):
 
     # Erstelle Token
     token = create_access_token(user['id'])
+
+    # Login protokollieren (best-effort, darf den Login nie blockieren)
+    try:
+        log_login(user['id'])
+    except Exception:
+        pass
 
     return AuthResponse(
         access_token=token,

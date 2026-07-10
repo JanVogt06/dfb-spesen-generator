@@ -39,7 +39,8 @@ from db.database import (
     get_session_by_id as db_get_session_by_id,
     upsert_match_expenses,
     get_match_expenses,
-    get_all_match_expenses_for_user
+    get_all_match_expenses_for_user,
+    log_download
 )
 from api.auth import router as auth_router, get_current_user
 from core.errors import (
@@ -762,6 +763,12 @@ async def download_all_as_zip(
         logger.info(f"ZIP erstellt: {zip_size} bytes")
         logger.info("=" * 80)
 
+        # Download protokollieren (best-effort, blockiert den Download nie)
+        try:
+            log_download(user_id, session_id, zip_filename, 'zip')
+        except Exception as e:
+            logger.error(f"Download-Logging fehlgeschlagen: {e}")
+
         return FileResponse(
             path=str(zip_path),
             filename=f"spesen_{datetime.now().strftime('%Y%m%d')}.zip",
@@ -816,6 +823,13 @@ async def download_file(
         media_type = "application/json"
     else:
         media_type = "application/octet-stream"
+
+    # Download protokollieren (best-effort, blockiert den Download nie)
+    try:
+        file_type = filename.rsplit('.', 1)[-1].lower() if '.' in filename else 'unbekannt'
+        log_download(user_id, session_id, filename, file_type)
+    except Exception as e:
+        logger.error(f"Download-Logging fehlgeschlagen: {e}")
 
     return FileResponse(
         path=file_path,
