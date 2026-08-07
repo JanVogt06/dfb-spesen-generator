@@ -278,6 +278,7 @@ class SpesenGenerator:
             oevm = expenses.get(f'{key}_oevm')
 
             # 0 ist ein gueltiger Wert (bewusst erfasst), None = nicht eingetragen
+            erfasst = km is not None or oevm is not None
             km_kosten = round(km * KM_SATZ_EURO, 2) if km is not None else None
             oevm_betrag = oevm if oevm is not None else None
 
@@ -285,13 +286,13 @@ class SpesenGenerator:
             replacements[f'{prefix}_Kilometer'] = format_spesen(km_kosten) if km_kosten else ''
             replacements[f'{prefix}_OEVM'] = format_spesen(oevm_betrag) if oevm_betrag else ''
 
-            # Summe nur, wenn die Person angesetzt ist und mindestens eine Komponente existiert
-            komponenten = [v for v in (spesen_num if active else None, km_kosten, oevm_betrag) if v is not None]
-            summe = round(sum(komponenten), 2) if komponenten and active else None
+            # Summe erst, wenn die Person angesetzt ist und ihre Fahrtkosten erfasst sind.
+            # Sonst stuende dort ein Betrag, zu dem die Fahrtkosten noch fehlen.
+            komponenten = [v for v in (spesen_num, km_kosten, oevm_betrag) if v is not None]
+            summe = round(sum(komponenten), 2) if komponenten and active and erfasst else None
             replacements[f'{prefix}_Summe'] = format_spesen(summe) if summe else ''
 
             if active:
-                erfasst = km is not None or oevm is not None
                 if not erfasst:
                     alle_aktiven_erfasst = False
                 elif summe is not None:
