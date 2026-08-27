@@ -38,6 +38,9 @@ logs/
 # Output/Sessions
 output/
 
+# Daten-Verzeichnis (Secrets, Datenbank, generierte Dokumente)
+data/
+
 # OS
 .DS_Store
 Thumbs.db

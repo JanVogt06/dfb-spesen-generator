@@ -6,17 +6,17 @@ import os
 import json
 from pathlib import Path
 from typing import Optional, Tuple, List
-from dotenv import load_dotenv
+
+# .env laden, bevor Module importiert werden, die Secrets beim Import lesen
+from core.config import load_environment
+
+load_environment()
 
 from scraper.dfb_scraper import DFBScraper
 from generator.docx_generator import SpesenGenerator
 from utils.session_manager import SessionManager
 from utils.logger import setup_logger
 from utils.pdf_converter import convert_docx_files_to_pdf
-
-# Lade .env Datei
-env_path = Path(__file__).parent.parent / ".env"
-load_dotenv(env_path)
 
 logger = setup_logger("main")
 

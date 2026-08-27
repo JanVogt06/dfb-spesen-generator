@@ -17,13 +17,17 @@ from fastapi.responses import FileResponse, JSONResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from dotenv import load_dotenv
-from scheduler import get_scheduler
 
 src_path = Path(__file__).parent.parent
 if str(src_path) not in sys.path:
     sys.path.insert(0, str(src_path))
 
+# .env laden, bevor Module importiert werden, die Secrets beim Import lesen
+from core.config import load_environment
+
+load_environment()
+
+from scheduler import get_scheduler
 from main import scrape_matches_with_session, generate_documents_in_session
 from utils.session_manager import SessionManager
 from utils.logger import setup_logger
@@ -52,10 +56,6 @@ from core.errors import (
     generic_exception_handler,
     DFBCredentialsInvalidError
 )
-
-# Lade .env
-env_path = src_path.parent / ".env"
-load_dotenv(env_path)
 
 logger = setup_logger("api")
 

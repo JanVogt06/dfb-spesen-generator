@@ -1,14 +1,18 @@
 #!/usr/bin/env bash
 #
-# Synct app.db und output/ vom Server auf das lokale Repo.
+# Synct data/app.db und data/output/ vom Server auf das lokale Repo.
 # Richtung: Server -> Lokal (lokale Daten werden dabei überschrieben/gelöscht,
 # damit sie exakt dem Server-Stand entsprechen).
+#
+# data/.env wird absichtlich NICHT gesynct - die Secrets bleiben auf dem Server.
 #
 set -euo pipefail
 
 SSH_HOST="jan-server"
-REMOTE_DIR="/home/janvogt/dockercontainer/dfb-spesen-generator"
-LOCAL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REMOTE_DIR="/home/janvogt/dockercontainer/dfb-spesen-generator/data"
+LOCAL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/data"
+
+mkdir -p "${LOCAL_DIR}/output"
 
 echo "Synce app.db von ${SSH_HOST}..."
 rsync -avz --progress \

@@ -1,12 +1,12 @@
 """
 Database Modul - SQLite Datenbank fuer User und Sessions
 """
-import os
 import sqlite3
 from pathlib import Path
 from datetime import datetime, UTC
 from typing import Dict, List, Optional
 
+from core import config
 from utils.logger import setup_logger
 
 logger = setup_logger("database")
@@ -14,10 +14,8 @@ logger = setup_logger("database")
 
 # Datenbankpfad
 def get_db_path() -> Path:
-    """Gibt Datenbank-Pfad zurueck (aus .env oder Standard)"""
-    PROJECT_ROOT = Path(__file__).parent.parent.parent
-    db_path = os.getenv("DATABASE_PATH", PROJECT_ROOT / "app.db")
-    path = Path(db_path)
+    """Gibt Datenbank-Pfad zurueck (DATABASE_PATH oder DATA_DIR/app.db)"""
+    path = config.get_db_path()
 
     # Erstelle Verzeichnis falls nicht existiert
     path.parent.mkdir(exist_ok=True, parents=True)

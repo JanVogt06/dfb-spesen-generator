@@ -22,9 +22,10 @@ frontend/.vite/
 .github/
 .gitignore
 
-# IDE
+# IDE / Tooling
 .vscode/
 .idea/
+.claude/
 *.swp
 *.swo
 
@@ -32,12 +33,17 @@ frontend/.vite/
 .DS_Store
 Thumbs.db
 
-# Persistente Daten (werden via Volumes gemountet)
+# Persistente Daten (liegen im Volume unter /data)
+data/
 app.db
 app.db-shm
 app.db-wal
 .env
 output/
+
+# Nur fuer Betrieb und Entwicklung, nicht im Image
+docker-compose.yml
+sync_from_server.sh
 
 # Docs
 *.md

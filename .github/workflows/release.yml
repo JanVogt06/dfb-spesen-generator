@@ -1,0 +1,125 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'  # Triggert bei Tags wie v1.0.0, v1.1.2
+  workflow_dispatch:
+    inputs:
+      platforms:
+        description: 'Zielplattformen (arm64 wird emuliert und dauert deutlich laenger)'
+        default: 'linux/amd64,linux/arm64'
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  release:
+    name: Build image and publish release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Resolve image name
+        id: image
+        run: |
+          owner=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          echo "name=ghcr.io/$owner/dfb-spesen-generator" >> "$GITHUB_OUTPUT"
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Collect image tags
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.image.outputs.name }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+            type=raw,value=edge,enable=${{ github.event_name == 'workflow_dispatch' }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        env:
+          DOCKER_BUILD_SUMMARY: false
+        with:
+          context: .
+          platforms: ${{ inputs.platforms || 'linux/amd64,linux/arm64' }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Create release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          body: |
+            ## Container Image
+
+            ```bash
+            docker pull ${{ steps.image.outputs.name }}:${{ steps.meta.outputs.version }}
+            ```
+
+            Gebaut für `linux/amd64` und `linux/arm64`.
+
+            ## Starten
+
+            Auf dem Server werden nur zwei Dinge gebraucht: diese
+            `docker-compose.yml` und ein Ordner `data` daneben. Kein Checkout,
+            kein Build.
+
+            ```yaml
+            services:
+              spesen-generator:
+                image: ${{ steps.image.outputs.name }}:${{ steps.meta.outputs.version }}
+                container_name: dfb-spesen-generator
+                restart: unless-stopped
+                ports:
+                  - "${SPESEN_PORT:-8001}:8001"
+                environment:
+                  - TZ=Europe/Berlin
+                volumes:
+                  # Secrets (.env), Datenbank (app.db) und generierte Dokumente (output/)
+                  - ./data:/data
+                healthcheck:
+                  test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/api/health').read()"]
+                  interval: 30s
+                  timeout: 10s
+                  retries: 3
+                  start_period: 40s
+            ```
+
+            ```bash
+            mkdir -p data
+            docker compose pull && docker compose up -d
+            ```
+
+            Danach ist die Oberfläche unter http://localhost:8001 erreichbar.
+            Fehlt `data/.env`, werden `JWT_SECRET_KEY` und `ENCRYPTION_KEY` beim
+            ersten Start erzeugt. **Diese Datei sichern** — ohne sie sind die
+            gespeicherten DFB-Zugangsdaten nicht mehr entschlüsselbar.
+
+            ## Aktualisieren
+
+            ```bash
+            docker compose pull && docker compose up -d
+            ```
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

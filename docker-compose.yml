@@ -1,21 +1,21 @@
 services:
-  tfv-spesen:
+  spesen-generator:
+    image: ghcr.io/janvogt06/dfb-spesen-generator:latest
+    # build: . wird nur lokal gebraucht; auf dem Server zieht "docker compose pull"
+    # das fertige Image und dieser Schlüssel bleibt ungenutzt.
     build: .
-    container_name: tfv-spesen-generator
+    container_name: dfb-spesen-generator
     restart: unless-stopped
     ports:
-      - "8001:8001"
+      - "${SPESEN_PORT:-8001}:8001"
     environment:
-      - DATABASE_URL=sqlite:///./app.db
-      - FRONTEND_DIR=/app/frontend/dist
+      - TZ=${TZ:-Europe/Berlin}
     volumes:
-      # Persistente Daten - werden NICHT überschrieben
-      - ./app.db:/app/app.db
-      - ./.env:/app/.env
-      - ./output:/app/output
-    networks:
-      - tfv-network
-
-networks:
-  tfv-network:
-    driver: bridge
+      # Secrets (.env), Datenbank (app.db) und generierte Dokumente (output/)
+      - ./data:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/api/health').read()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s

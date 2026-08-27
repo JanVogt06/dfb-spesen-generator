@@ -1,37 +1,16 @@
 """
 Session Manager - Verwaltet Session-basierte Ausgabeordner fuer Web-Anfragen
-VERBESSERT: Findet automatisch das Projekt-Root
 """
-import os
 import secrets
 from datetime import datetime
 from pathlib import Path
 import json
 from typing import Dict, List, Optional
 
+from core import config
 from utils.logger import setup_logger
 
 logger = setup_logger("session_manager")
-
-
-def find_project_root() -> Path:
-    """
-    Findet das Projekt-Root-Verzeichnis (wo .env liegt).
-    Sucht von der aktuellen Datei aus nach oben.
-    """
-    current = Path(__file__).resolve()
-
-    # Gehe von utils/session_manager.py aus nach oben
-    # utils/session_manager.py -> utils/ -> src/ -> projekt-root/
-    for parent in [current.parent, current.parent.parent, current.parent.parent.parent]:
-        # Pruefe ob .env oder .git existiert (typische Root-Marker)
-        if (parent / ".env").exists() or (parent / ".git").exists():
-            return parent
-
-    # Fallback: 2 Ebenen hoch von dieser Datei
-    # session_manager.py liegt in src/utils/
-    # -> src/utils/ -> src/ -> projekt-root/
-    return current.parent.parent.parent
 
 
 class SessionManager:
@@ -43,18 +22,18 @@ class SessionManager:
 
         Args:
             base_output_dir: Basis-Verzeichnis fuer alle Sessions.
-                           Falls None oder relativ: Wird automatisch im Projekt-Root platziert.
+                           Falls None: OUTPUT_DIR bzw. DATA_DIR/output.
+                           Relative Pfade liegen unterhalb von DATA_DIR.
         """
         if base_output_dir is None:
-            base_output_dir = "output"
+            base_path = config.get_output_dir()
+        else:
+            base_path = Path(base_output_dir)
 
-        base_path = Path(base_output_dir)
-
-        # Wenn relativer Pfad: Kombiniere mit Projekt-Root
-        if not base_path.is_absolute():
-            project_root = find_project_root()
-            base_path = project_root / base_output_dir
-            logger.info(f"Relativer Pfad erkannt. Verwende Projekt-Root: {project_root}")
+            # Wenn relativer Pfad: Kombiniere mit dem Daten-Verzeichnis
+            if not base_path.is_absolute():
+                base_path = config.get_data_dir() / base_path
+                logger.info(f"Relativer Pfad erkannt. Verwende Daten-Verzeichnis: {config.get_data_dir()}")
 
         self.base_output_dir = base_path
         self.base_output_dir.mkdir(exist_ok=True, parents=True)
