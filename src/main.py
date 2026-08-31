@@ -1,5 +1,5 @@
 """
-DFB Spesen Generator - Main Entry Point
+Spesenfuchs - Main Entry Point
 Startet die FastAPI Backend-Anwendung
 """
 import os
@@ -116,7 +116,7 @@ def generate_documents_in_session(matches_data: List[dict], session_path: Path, 
     Returns:
         Liste der generierten Dateipfade
     """
-    logger.info("=== DFB Spesen Generator: Erstelle Dokumente ===")
+    logger.info("=== Spesenfuchs: Erstelle Dokumente ===")
 
     # Gespeicherte Fahrtkosten/OeVM des Users laden
     expenses_map = {}
@@ -209,7 +209,7 @@ def main():
     API_HOST = os.getenv("API_HOST", "0.0.0.0")
     API_PORT = int(os.getenv("API_PORT", "8001"))  # Default: 8001 statt 8000
 
-    logger.info("Starte TFV Spesen Generator API...")
+    logger.info("Starte Spesenfuchs API...")
     logger.info("==============================================")
     logger.info(f"API läuft auf: http://{API_HOST}:{API_PORT}")
     logger.info("==============================================")

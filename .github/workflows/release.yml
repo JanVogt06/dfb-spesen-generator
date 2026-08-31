@@ -26,7 +26,7 @@ jobs:
         id: image
         run: |
           owner=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-          echo "name=ghcr.io/$owner/dfb-spesen-generator" >> "$GITHUB_OUTPUT"
+          echo "name=ghcr.io/$owner/spesenfuchs" >> "$GITHUB_OUTPUT"
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -81,35 +81,19 @@ jobs:
 
             ## Starten
 
-            Auf dem Server werden nur zwei Dinge gebraucht: diese
-            `docker-compose.yml` und ein Ordner `data` daneben. Kein Checkout,
-            kein Build.
-
-            ```yaml
-            services:
-              spesen-generator:
-                image: ${{ steps.image.outputs.name }}:${{ steps.meta.outputs.version }}
-                container_name: dfb-spesen-generator
-                restart: unless-stopped
-                ports:
-                  - "${SPESEN_PORT:-8001}:8001"
-                environment:
-                  - TZ=Europe/Berlin
-                volumes:
-                  # Secrets (.env), Datenbank (app.db) und generierte Dokumente (output/)
-                  - ./data:/data
-                healthcheck:
-                  test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/api/health').read()"]
-                  interval: 30s
-                  timeout: 10s
-                  retries: 3
-                  start_period: 40s
-            ```
+            Auf dem Server werden nur zwei Dinge gebraucht: die
+            `docker-compose.yml` dieses Tags und ein Ordner `data` daneben.
+            Kein Checkout, kein Build.
 
             ```bash
-            mkdir -p data
-            docker compose pull && docker compose up -d
+            mkdir -p spesenfuchs/data && cd spesenfuchs
+            curl -O https://raw.githubusercontent.com/${{ github.repository }}/${{ github.ref_name }}/docker-compose.yml
+            sed -i 's/:latest/:${{ steps.meta.outputs.version }}/' docker-compose.yml
+            docker compose up -d
             ```
+
+            Ohne das `sed` bleibt es bei `latest`, dann aktualisiert jedes
+            `docker compose pull` auf die jeweils neueste Version.
 
             Danach ist die Oberfläche unter http://localhost:8001 erreichbar.
             Fehlt `data/.env`, werden `JWT_SECRET_KEY` und `ENCRYPTION_KEY` beim

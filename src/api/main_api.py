@@ -1,5 +1,5 @@
 """
-FastAPI Backend fuer DFB Spesen Generator
+FastAPI Backend fuer Spesenfuchs
 """
 import os
 import sys
@@ -87,7 +87,7 @@ async def lifespan(app: FastAPI):
     logger.info("Scheduler gestoppt")
 
 
-app = FastAPI(title="TFV Spesen Generator API", lifespan=lifespan)
+app = FastAPI(title="Spesenfuchs API", lifespan=lifespan)
 
 # Exception Handlers registrieren
 app.add_exception_handler(APIError, api_error_handler)
@@ -927,7 +927,7 @@ async def health_check():
     """Health Check Endpoint"""
     return {
         "status": "online",
-        "service": "TFV Spesen Generator API",
+        "service": "Spesenfuchs API",
         "version": "1.1.1",
         "output_dir": str(session_manager.base_output_dir)
     }

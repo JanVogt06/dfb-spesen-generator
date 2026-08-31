@@ -49,7 +49,7 @@ export function RegisterForm() {
             <CardHeader className="px-4 sm:px-6">
                 <CardTitle className="text-lg sm:text-xl">Registrieren</CardTitle>
                 <CardDescription className="text-sm">
-                    Erstelle einen neuen TFV Spesen Generator Account
+                    Erstelle einen neuen Spesenfuchs-Account
                 </CardDescription>
             </CardHeader>
             <CardContent className="px-4 sm:px-6">

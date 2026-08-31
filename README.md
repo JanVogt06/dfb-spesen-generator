@@ -1,6 +1,6 @@
-# DFB Spesen Generator
+# Spesenfuchs
 
-Erstellt Schiedsrichter-Spesenabrechnungen automatisch aus den eigenen
+**Schiri-Spesen-Automat.** Erstellt Schiedsrichter-Spesenabrechnungen automatisch aus den eigenen
 DFB.net-Ansetzungen. Einmal die DFB.net-Zugangsdaten hinterlegen, danach holt
 die Anwendung jede Nacht die aktuellen Ansetzungen und legt für jedes Spiel eine
 fertige Abrechnung als DOCX und PDF ab — inklusive Fahrtkosten, wenn die
@@ -12,34 +12,13 @@ Self-hosted: ein Container, eine `docker-compose.yml`, ein `data`-Ordner.
 
 ### Auf einem Server, ohne Checkout
 
-Der Quellcode wird nicht gebraucht — eine Datei und ein Ordner genügen.
-`docker-compose.yml` in einem leeren Verzeichnis anlegen:
-
-```yaml
-services:
-  spesen-generator:
-    image: ghcr.io/janvogt06/dfb-spesen-generator:latest
-    container_name: dfb-spesen-generator
-    restart: unless-stopped
-    ports:
-      - "${SPESEN_PORT:-8001}:8001"
-    environment:
-      - TZ=Europe/Berlin
-    volumes:
-      # Secrets (.env), Datenbank (app.db) und generierte Dokumente (output/)
-      - ./data:/data
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/api/health').read()"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-```
-
-Dann:
+Der Quellcode wird nicht gebraucht — eine Datei und ein Ordner genügen. Die
+`docker-compose.yml` dieses Repositories ist unverändert server-tauglich, sie
+enthält absichtlich keine Build-Anweisung:
 
 ```bash
-mkdir -p data
+mkdir -p spesenfuchs/data && cd spesenfuchs
+curl -O https://raw.githubusercontent.com/JanVogt06/spesenfuchs/main/docker-compose.yml
 docker compose pull && docker compose up -d
 ```
 
@@ -47,17 +26,24 @@ Danach ist die Oberfläche unter http://localhost:8001 erreichbar, von anderen
 Geräten im Netzwerk über die Adresse des Hosts, zum Beispiel
 `http://192.168.1.20:8001`.
 
-Statt `latest` lässt sich eine Version festnageln (`:1.2.0`), wenn Sie selbst
-entscheiden möchten, wann aktualisiert wird. Die `docker-compose.yml` in diesem
-Repository trägt zusätzlich `build: .` für die lokale Entwicklung; auf einer
-Maschine ohne Quellcode ist dieser Schlüssel nutzlos und `--build` würde
-fehlschlagen, dort also weglassen.
+Die Datei zieht `latest`. Wer selbst entscheiden möchte, wann aktualisiert wird,
+nagelt die Version fest — entweder von Hand oder gleich beim Einrichten:
+
+```bash
+sed -i 's/:latest/:1.2.1/' docker-compose.yml
+```
 
 ### Aus einem Checkout
 
 ```bash
 docker compose up -d --build
 ```
+
+Im Checkout liegt neben der Compose-Datei eine
+[`docker-compose.override.yml`](docker-compose.override.yml), die Docker Compose
+automatisch dazulädt und die `build: .` ergänzt. Deshalb baut derselbe Befehl
+hier aus dem Quellcode, während auf dem Server ohne diese Datei das fertige
+Image benutzt wird — eine Konfiguration, zwei Verwendungen.
 
 ### Port ändern
 
@@ -94,7 +80,7 @@ Ein Backup ist damit ein Kopieren des Ordners:
 
 ```bash
 docker compose stop
-tar -czf spesen-backup-$(date +%F).tar.gz data
+tar -czf spesenfuchs-backup-$(date +%F).tar.gz data
 docker compose start
 ```
 
@@ -111,6 +97,21 @@ Der `data`-Ordner wird dabei nicht angefasst.
 
 ## Umstieg vom alten Setup
 
+Das Projekt hieß früher *DFB Spesen Generator*; Image, Service und Container
+heißen jetzt `spesenfuchs`. Eine laufende Installation zieht weiter das alte
+Image, bis ihre `docker-compose.yml` auf
+`ghcr.io/janvogt06/spesenfuchs` umgestellt ist. Der alte Container muss dabei
+einmal weichen, weil sich der `container_name` geändert hat:
+
+```bash
+docker compose down          # entfernt den Container "dfb-spesen-generator"
+curl -O https://raw.githubusercontent.com/JanVogt06/spesenfuchs/main/docker-compose.yml
+docker compose pull && docker compose up -d
+```
+
+Der `data`-Ordner bleibt davon unberührt — Datenbank, Secrets und erzeugte
+Dokumente überleben die Umbenennung.
+
 Früher lief die Anwendung aus einem Checkout mit `docker compose up -d --build`
 und drei einzelnen Bind-Mounts (`./app.db`, `./.env`, `./output`). Die
 vorhandenen Daten wandern einmalig in den `data`-Ordner:
@@ -119,7 +120,7 @@ vorhandenen Daten wandern einmalig in den `data`-Ordner:
 cd /pfad/zum/alten/verzeichnis
 
 # 1. Sicherung, bevor irgendetwas bewegt wird
-tar -czf ~/spesen-backup-$(date +%F).tar.gz app.db .env output
+tar -czf ~/spesenfuchs-backup-$(date +%F).tar.gz app.db .env output
 
 # 2. Alten Container stoppen (das Image bleibt vorerst liegen)
 docker compose down
@@ -140,7 +141,7 @@ halb migriertes Verzeichnis startet also nicht mit leerer Datenbank.
 
 Ein Tag, der mit `v` beginnt, baut ein Multi-Architektur-Image (`linux/amd64`
 und `linux/arm64`), veröffentlicht es unter
-`ghcr.io/janvogt06/dfb-spesen-generator` als `<version>`, `<major>.<minor>` und
+`ghcr.io/janvogt06/spesenfuchs` als `<version>`, `<major>.<minor>` und
 `latest` und legt daraus ein GitHub-Release an:
 
 ```bash
@@ -187,7 +188,8 @@ LibreOffice entstehen nur die DOCX-Dateien.
 | `src/db/database.py` | SQLite-Zugriff |
 | `frontend/` | React-Oberfläche (Vite), wird ins Image gebaut |
 | `Dockerfile` | Image mit Frontend-Build, Playwright und LibreOffice |
-| `docker-compose.yml` | Service, Port, Volume und Health Check |
+| `docker-compose.yml` | Service, Port, Volume und Health Check — ohne Build, direkt server-tauglich |
+| `docker-compose.override.yml` | Ergänzt lokal `build: .`, wird von Compose automatisch geladen |
 | `.github/workflows/release.yml` | Image-Bau und Release beim Tag-Push |
 
 ## Lizenz

@@ -9,6 +9,8 @@
 set -euo pipefail
 
 SSH_HOST="jan-server"
+# Verzeichnisname auf dem Server - beim Umbenennen des Server-Ordners
+# (Projekt heisst inzwischen "spesenfuchs") hier mitziehen.
 REMOTE_DIR="/home/janvogt/dockercontainer/dfb-spesen-generator/data"
 LOCAL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/data"
 

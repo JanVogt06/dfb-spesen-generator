@@ -9,7 +9,7 @@ export function LoginPage() {
                 <span className="grid size-8 place-items-center rounded-lg bg-primary text-primary-foreground">
                     <Receipt className="size-4.5"/>
                 </span>
-                <span className="text-base font-semibold tracking-tight">TFV Spesen</span>
+                <span className="text-base font-semibold tracking-tight">Spesenfuchs</span>
             </Link>
             <LoginForm/>
         </div>

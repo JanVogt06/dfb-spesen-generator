@@ -6,6 +6,12 @@
       "runtimeExecutable": "/opt/homebrew/anaconda3/envs/spesen-generator/bin/python",
       "runtimeArgs": ["src/main.py"],
       "port": 8001
+    },
+    {
+      "name": "frontend",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--prefix", "frontend"],
+      "port": 5173
     }
   ]
 }

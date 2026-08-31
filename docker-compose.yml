@@ -1,10 +1,11 @@
+# Einzige Quelle fuer die Compose-Konfiguration: unveraendert auf einem Server
+# verwendbar, weil keine Build-Anweisung darin steht - es wird nur das fertige
+# Image von GHCR gezogen. Im Checkout ergaenzt docker-compose.override.yml
+# automatisch "build: ." fuer die lokale Entwicklung.
 services:
-  spesen-generator:
-    image: ghcr.io/janvogt06/dfb-spesen-generator:latest
-    # build: . wird nur lokal gebraucht; auf dem Server zieht "docker compose pull"
-    # das fertige Image und dieser Schlüssel bleibt ungenutzt.
-    build: .
-    container_name: dfb-spesen-generator
+  spesenfuchs:
+    image: ghcr.io/janvogt06/spesenfuchs:latest
+    container_name: spesenfuchs
     restart: unless-stopped
     ports:
       - "${SPESEN_PORT:-8001}:8001"

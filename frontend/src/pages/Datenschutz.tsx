@@ -64,7 +64,7 @@ export function Datenschutz() {
                         <span className="grid size-7 place-items-center rounded-lg bg-primary text-primary-foreground">
                             <Receipt className="size-4"/>
                         </span>
-                        <span className="text-sm font-semibold tracking-tight">TFV Spesen</span>
+                        <span className="text-sm font-semibold tracking-tight">Spesenfuchs</span>
                     </button>
                     <Button
                         variant="ghost"

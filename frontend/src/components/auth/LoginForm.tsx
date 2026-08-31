@@ -37,7 +37,7 @@ export function LoginForm() {
             <CardHeader className="px-4 sm:px-6">
                 <CardTitle className="text-lg sm:text-xl">Anmelden</CardTitle>
                 <CardDescription className="text-sm">
-                    Melde dich mit deinem TFV Spesen Generator Account an
+                    Melde dich mit deinem Spesenfuchs-Account an
                 </CardDescription>
             </CardHeader>
             <CardContent className="px-4 sm:px-6">

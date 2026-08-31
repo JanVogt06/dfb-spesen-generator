@@ -29,7 +29,7 @@ export function AppShell({children, actions}: AppShellProps) {
                         <Receipt className="size-4"/>
                     </span>
                     <span className="hidden text-sm font-semibold tracking-tight whitespace-nowrap sm:block sm:text-base">
-                        TFV Spesen
+                        Spesenfuchs
                     </span>
                 </Link>
 

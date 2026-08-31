@@ -93,7 +93,7 @@ export function LandingPage() {
     const faqs = [
         {
             question: 'Ist der Service wirklich kostenlos?',
-            answer: 'Ja, der TFV Spesen Generator ist zu 100% kostenlos für alle Schiedsrichter in Thüringen. ' +
+            answer: 'Ja, Spesenfuchs ist zu 100% kostenlos für alle Schiedsrichter in Thüringen. ' +
                 'Es gibt keine versteckten Kosten oder Premium-Features.',
         },
         {
@@ -130,7 +130,7 @@ export function LandingPage() {
                         <span className="grid size-7 place-items-center rounded-lg bg-primary text-primary-foreground">
                             <Receipt className="size-4"/>
                         </span>
-                        <span className="text-sm font-semibold tracking-tight whitespace-nowrap">TFV Spesen</span>
+                        <span className="text-sm font-semibold tracking-tight whitespace-nowrap">Spesenfuchs</span>
                     </div>
                     <div className="flex items-center gap-2">
                         <Button
@@ -407,7 +407,7 @@ export function LandingPage() {
                                 <Receipt className="size-4"/>
                             </span>
                             <div className="leading-tight">
-                                <span className="block text-sm font-semibold tracking-tight">TFV Spesen Generator</span>
+                                <span className="block text-sm font-semibold tracking-tight">Spesenfuchs</span>
                                 <span className="text-xs text-muted-foreground">
                                     Für Schiedsrichter des Thüringer Fußball-Verbandes
                                 </span>

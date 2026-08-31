@@ -16,9 +16,9 @@ RUN npm run build
 # ===== Backend Stage =====
 FROM python:3.14
 
-LABEL org.opencontainers.image.title="DFB Spesen Generator" \
-      org.opencontainers.image.description="Automatischer Generator für Schiedsrichter-Spesenabrechnungen aus DFB.net Ansetzungen" \
-      org.opencontainers.image.source="https://github.com/JanVogt06/dfb-spesen-generator" \
+LABEL org.opencontainers.image.title="Spesenfuchs" \
+      org.opencontainers.image.description="Schiri-Spesen-Automat: erstellt Spesenabrechnungen automatisch aus DFB.net-Ansetzungen" \
+      org.opencontainers.image.source="https://github.com/JanVogt06/spesenfuchs" \
       org.opencontainers.image.licenses="MIT"
 
 WORKDIR /app
